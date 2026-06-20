@@ -1,0 +1,108 @@
+import duckdb
+from typing import List, Dict, Any
+from app.models.schema import NormalizedLogEntry
+from app.storage.base import BaseStorage
+from app.normalization.url import URLNormalizer
+from app.bot_detection.detector import BotDetector
+import os
+
+class DuckDBStorage(BaseStorage):
+    """
+    DuckDB-backed storage for high-performance analytics.
+    """
+
+    def __init__(self, db_path: str = ":memory:"):
+        self.db_path = db_path
+        self.conn = duckdb.connect(database=self.db_path)
+        self.initialize()
+
+    def initialize(self):
+        """Initialize the schema for normalized logs and views."""
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS log_entries (
+                timestamp TIMESTAMP,
+                ip VARCHAR,
+                method VARCHAR,
+                url VARCHAR,
+                query_string VARCHAR,
+                status_code INTEGER,
+                bytes_sent BIGINT,
+                request_size_bytes BIGINT,
+                response_time_ms DOUBLE,
+                referrer VARCHAR,
+                user_agent VARCHAR,
+                host VARCHAR,
+                virtual_host VARCHAR,
+                protocol VARCHAR,
+                normalized_url VARCHAR,
+                bot_classification VARCHAR
+            )
+        """)
+
+        # Create indices for common filtering columns
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON log_entries(timestamp)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_ip ON log_entries(ip)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_status_code ON log_entries(status_code)")
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_bot_classification ON log_entries(bot_classification)")
+
+        # Create view for sessionization (30 min timeout)
+        self.conn.execute("""
+            CREATE OR REPLACE VIEW log_sessions AS
+            WITH session_groups AS (
+                SELECT
+                    *,
+                    SUM(CASE WHEN prev_time IS NULL OR epoch(timestamp) - epoch(prev_time) > 1800 THEN 1 ELSE 0 END)
+                    OVER (PARTITION BY ip, user_agent ORDER BY timestamp) AS session_id_num
+                FROM (
+                    SELECT
+                        *,
+                        LAG(timestamp) OVER (PARTITION BY ip, user_agent ORDER BY timestamp) AS prev_time
+                    FROM log_entries
+                )
+            )
+            SELECT
+                *,
+                ip || '-' || coalesce(user_agent, 'unknown') || '-' || session_id_num AS session_id
+            FROM session_groups
+        """)
+
+    def ingest_batch(self, entries: List[NormalizedLogEntry]):
+        """Ingest a batch of NormalizedLogEntry objects into DuckDB."""
+        if not entries:
+            return
+
+        data = []
+        for entry in entries:
+            normalized_url = URLNormalizer.normalize(entry.url)
+            bot_classification = BotDetector.classify(entry.user_agent)
+            data.append((
+                entry.timestamp,
+                entry.ip,
+                entry.method,
+                entry.url,
+                entry.query_string,
+                entry.status_code,
+                entry.bytes_sent,
+                entry.request_size_bytes,
+                entry.response_time_ms,
+                entry.referrer,
+                entry.user_agent,
+                entry.host,
+                entry.virtual_host,
+                entry.protocol,
+                normalized_url,
+                bot_classification
+            ))
+
+        self.conn.executemany("""
+            INSERT INTO log_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, data)
+
+    def execute_query(self, query: str, parameters: tuple = ()) -> List[Dict[str, Any]]:
+        """Execute a query and return results as dictionaries."""
+        cursor = self.conn.execute(query, parameters)
+        columns = [desc[0] for desc in cursor.description]
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    def close(self):
+        self.conn.close()
