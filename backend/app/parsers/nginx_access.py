@@ -3,21 +3,18 @@ from datetime import datetime
 from typing import Optional
 from app.models.schema import NormalizedLogEntry
 from app.parsers.base import BaseParser
-
 from app.parsers.registry import ParserRegistry
 
-@ParserRegistry.register("apache_access")
-class ApacheAccessParser(BaseParser):
+@ParserRegistry.register("nginx_access")
+class NginxAccessParser(BaseParser):
     """
-    Parser for Apache Combined Access Logs.
-    Format typically: %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"
+    Parser for Nginx Combined Access Logs.
+    Format typically: $remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"
     """
 
-    # Example line:
-    # 127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08 [en] (Win98; I ;Nav)"
     LOG_PATTERN = re.compile(
         r'(?P<ip>\S+)\s+'                 # IP address
-        r'\S+\s+'                         # Remote logname (ignored)
+        r'\S+\s+'                         # Remote user (ignored)
         r'\S+\s+'                         # Remote user (ignored)
         r'\[(?P<timestamp>[^\]]+)\]\s+'   # Time
         r'"(?P<method>\S+)\s+'            # Method
