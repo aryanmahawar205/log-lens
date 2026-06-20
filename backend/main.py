@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import analytics
+from app.api.routes import analytics, security
 
 app = FastAPI(
     title="LogLens API",
@@ -19,6 +19,7 @@ app.add_middleware(
 
 # Include routes
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(security.router, prefix="/api/v1/analytics/security", tags=["security"])
 
 @app.get("/health")
 async def health_check():
