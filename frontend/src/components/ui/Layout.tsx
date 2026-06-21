@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Zap, Link as LinkIcon, Users, Search, Settings } from 'lucide-react';
+import { LayoutDashboard, Activity, Zap, Link as LinkIcon, Users, Search, Settings, Shield } from 'lucide-react';
 import { TopBar } from '../TopBar';
 
 interface LayoutProps {
@@ -14,6 +14,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Performance', path: '/performance', icon: Zap },
     { name: 'URLs', path: '/urls', icon: LinkIcon },
     { name: 'Visitors', path: '/visitors', icon: Users },
+    { name: 'Security', path: '/security', icon: Shield },
     { name: 'Log Explorer', path: '/explorer', icon: Search },
   ];
 

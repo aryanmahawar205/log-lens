@@ -6,6 +6,7 @@ import { PerformanceAnalytics } from './pages/PerformanceAnalytics';
 import { UrlAnalytics } from './pages/UrlAnalytics';
 import { VisitorAnalytics } from './pages/VisitorAnalytics';
 import { LogExplorer } from './pages/LogExplorer';
+import { SecurityAnalytics } from './pages/SecurityAnalytics';
 import { FilterProvider } from './context/FilterContext';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <Route path="/performance" element={<PerformanceAnalytics />} />
             <Route path="/urls" element={<UrlAnalytics />} />
             <Route path="/visitors" element={<VisitorAnalytics />} />
+            <Route path="/security" element={<SecurityAnalytics />} />
             <Route path="/explorer" element={<LogExplorer />} />
           </Routes>
         </Layout>
