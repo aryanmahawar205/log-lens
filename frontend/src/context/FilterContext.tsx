@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
 
 export interface FilterState {
+  upload_id?: number;
   start_date?: string;
   end_date?: string;
   ip?: string;

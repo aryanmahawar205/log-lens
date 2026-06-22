@@ -11,6 +11,7 @@ class QueryBuilder:
         Builds a SQL WHERE clause and corresponding parameter list.
 
         Supported filters:
+        - upload_id (int)
         - start_date (str, iso format)
         - end_date (str, iso format)
         - ip (str)
@@ -25,6 +26,10 @@ class QueryBuilder:
 
         clauses = []
         parameters = []
+
+        if "upload_id" in filters and filters["upload_id"] is not None:
+            clauses.append("upload_id = ?")
+            parameters.append(filters["upload_id"])
 
         if "start_date" in filters and filters["start_date"]:
             clauses.append("timestamp >= CAST(? AS TIMESTAMP)")

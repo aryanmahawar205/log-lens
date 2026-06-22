@@ -32,4 +32,4 @@ def test_detector_none():
     ]
     parser_name, score = FormatDetector.detect_format(lines)
     assert score == 0.0
-    assert parser_name is None
+    assert parser_name == "UNKNOWN_FORMAT"

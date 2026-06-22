@@ -15,11 +15,11 @@ class AnalyticsEngine:
         else:
             self.storage = storage
 
-    def ingest_entries(self, entries: List[NormalizedLogEntry]):
+    def ingest_entries(self, entries: List[NormalizedLogEntry], upload_id: int = 0):
         """
         Ingest a list of NormalizedLogEntry objects into the engine.
         """
-        self.storage.ingest_batch(entries)
+        self.storage.ingest_batch(entries, upload_id)
 
     def get_traffic_summary(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -432,7 +432,14 @@ class AnalyticsEngine:
         where_condition = where_condition + " AND response_time_ms IS NOT NULL" if where_condition else " WHERE response_time_ms IS NOT NULL"
 
         fast_query = f"""
-            SELECT normalized_url as url, AVG(response_time_ms) as avg_time, COUNT(*) as count
+            SELECT
+                normalized_url as url,
+                AVG(response_time_ms) as avg_time,
+                QUANTILE_CONT(response_time_ms, 0.5) as median_time,
+                QUANTILE_CONT(response_time_ms, 0.90) as p90_time,
+                QUANTILE_CONT(response_time_ms, 0.95) as p95_time,
+                QUANTILE_CONT(response_time_ms, 0.99) as p99_time,
+                COUNT(*) as count
             FROM log_entries
             {where_condition}
             GROUP BY normalized_url
@@ -510,13 +517,14 @@ class AnalyticsEngine:
         browser_query = f"""
             SELECT
                 CASE
+                    WHEN user_agent IS NULL OR user_agent = '' THEN 'Unknown'
                     WHEN user_agent ILIKE '%Chrome%' AND user_agent NOT ILIKE '%Edg%' THEN 'Chrome'
                     WHEN user_agent ILIKE '%Safari%' AND user_agent NOT ILIKE '%Chrome%' THEN 'Safari'
                     WHEN user_agent ILIKE '%Firefox%' THEN 'Firefox'
                     WHEN user_agent ILIKE '%Edg%' THEN 'Edge'
                     WHEN user_agent ILIKE '%Googlebot%' THEN 'Googlebot'
                     WHEN user_agent ILIKE '%curl%' THEN 'cURL'
-                    ELSE 'Other'
+                    ELSE 'Unknown'
                 END as browser,
                 COUNT(*) as count
             FROM log_entries
@@ -529,12 +537,13 @@ class AnalyticsEngine:
         os_query = f"""
             SELECT
                 CASE
+                    WHEN user_agent IS NULL OR user_agent = '' THEN 'Unknown'
                     WHEN user_agent ILIKE '%Windows%' THEN 'Windows'
                     WHEN user_agent ILIKE '%Mac OS X%' THEN 'Mac OS'
                     WHEN user_agent ILIKE '%Linux%' AND user_agent NOT ILIKE '%Android%' THEN 'Linux'
                     WHEN user_agent ILIKE '%Android%' THEN 'Android'
                     WHEN user_agent ILIKE '%iPhone%' OR user_agent ILIKE '%iPad%' THEN 'iOS'
-                    ELSE 'Other'
+                    ELSE 'Unknown'
                 END as os,
                 COUNT(*) as count
             FROM log_entries

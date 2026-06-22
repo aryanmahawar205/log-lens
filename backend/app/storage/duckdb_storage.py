@@ -19,7 +19,20 @@ class DuckDBStorage(BaseStorage):
     def initialize(self):
         """Initialize the schema for normalized logs and views."""
         self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS uploads (
+                id BIGINT PRIMARY KEY,
+                filename VARCHAR,
+                format VARCHAR,
+                uploaded_at TIMESTAMP,
+                total_entries BIGINT,
+                parser_used VARCHAR,
+                confidence DOUBLE
+            )
+        """)
+
+        self.conn.execute("""
             CREATE TABLE IF NOT EXISTS log_entries (
+                upload_id BIGINT,
                 timestamp TIMESTAMP,
                 ip VARCHAR,
                 method VARCHAR,
@@ -40,6 +53,7 @@ class DuckDBStorage(BaseStorage):
         """)
 
         # Create indices for common filtering columns
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_upload_id ON log_entries(upload_id)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON log_entries(timestamp)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_ip ON log_entries(ip)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_status_code ON log_entries(status_code)")
@@ -52,21 +66,21 @@ class DuckDBStorage(BaseStorage):
                 SELECT
                     *,
                     SUM(CASE WHEN prev_time IS NULL OR epoch(timestamp) - epoch(prev_time) > 1800 THEN 1 ELSE 0 END)
-                    OVER (PARTITION BY ip, user_agent ORDER BY timestamp) AS session_id_num
+                    OVER (PARTITION BY upload_id, ip, user_agent ORDER BY timestamp) AS session_id_num
                 FROM (
                     SELECT
                         *,
-                        LAG(timestamp) OVER (PARTITION BY ip, user_agent ORDER BY timestamp) AS prev_time
+                        LAG(timestamp) OVER (PARTITION BY upload_id, ip, user_agent ORDER BY timestamp) AS prev_time
                     FROM log_entries
                 )
             )
             SELECT
                 *,
-                ip || '-' || coalesce(user_agent, 'unknown') || '-' || session_id_num AS session_id
+                COALESCE(upload_id, 0) || '-' || ip || '-' || coalesce(user_agent, 'unknown') || '-' || session_id_num AS session_id
             FROM session_groups
         """)
 
-    def ingest_batch(self, entries: List[NormalizedLogEntry]):
+    def ingest_batch(self, entries: List[NormalizedLogEntry], upload_id: int = 0):
         """Ingest a batch of NormalizedLogEntry objects into DuckDB."""
         if not entries:
             return
@@ -76,6 +90,7 @@ class DuckDBStorage(BaseStorage):
             normalized_url = URLNormalizer.normalize(entry.url)
             bot_classification = BotDetector.classify(entry.user_agent)
             data.append((
+                upload_id,
                 entry.timestamp,
                 entry.ip,
                 entry.method,
@@ -95,7 +110,7 @@ class DuckDBStorage(BaseStorage):
             ))
 
         self.conn.executemany("""
-            INSERT INTO log_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO log_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, data)
 
     def execute_query(self, query: str, parameters: tuple = ()) -> List[Dict[str, Any]]:

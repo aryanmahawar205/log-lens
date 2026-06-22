@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Filter, Calendar, Globe, AlertCircle, Bot, X, UploadCloud } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Filter, Calendar, Globe, AlertCircle, Bot, X, UploadCloud, Database } from 'lucide-react';
 import { useFilterContext } from '../context/FilterContext';
 import { FileUpload } from './FileUpload';
 
@@ -7,11 +7,40 @@ export function TopBar() {
   const { filters, setFilter, clearFilters, hasActiveFilters } = useFilterContext();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [datasets, setDatasets] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Determine API URL based on environment/location to avoid hardcoding localhost
+    const apiUrl = window.location.hostname === 'localhost'
+      ? 'http://localhost:8000/api/v1/analytics/datasets'
+      : '/api/v1/analytics/datasets';
+
+    fetch(apiUrl)
+      .then(res => res.json())
+      .then(data => setDatasets(data))
+      .catch(err => console.error("Failed to fetch datasets", err));
+  }, [isUploadOpen]); // Refetch datasets when upload modal closes
 
   return (
     <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-6 shrink-0 relative z-10">
       <div className="flex items-center">
-        {/* Breadcrumb or title space */}
+        {datasets.length > 0 && (
+          <div className="flex items-center bg-gray-800 rounded-md px-3 py-1.5 border border-gray-700">
+            <Database className="w-4 h-4 text-blue-400 mr-2" />
+            <select
+              className="bg-transparent text-sm text-gray-200 outline-none"
+              value={filters.upload_id || ''}
+              onChange={(e) => setFilter('upload_id', e.target.value ? Number(e.target.value) : undefined)}
+            >
+              <option value="">All Datasets</option>
+              {datasets.map((ds: any) => (
+                <option key={ds.id} value={ds.id}>
+                  {ds.filename} ({new Date(ds.uploaded_at).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center space-x-4">

@@ -126,7 +126,10 @@ class SecurityAnalyzer:
                 user_agent ILIKE '%DirBuster%' OR
                 user_agent ILIKE '%sqlmap%' OR
                 user_agent ILIKE '%ffuf%' OR
-                user_agent ILIKE '%wfuzz%'
+                user_agent ILIKE '%wfuzz%' OR
+                user_agent ILIKE '%masscan%' OR
+                user_agent ILIKE '%ZMap%' OR
+                user_agent ILIKE '%OpenVAS%'
             )
             GROUP BY ip, user_agent
         """
@@ -138,6 +141,61 @@ class SecurityAnalyzer:
                 "type": "scanner",
                 "ip": r["ip"],
                 "evidence": [f"Scanner UA: {r['user_agent']}, requests: {r['request_count']}"]
+            })
+        return findings
+
+    def _detect_command_injection(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+        query = f"""
+            SELECT ip, url, query_string
+            FROM log_entries
+            {where_clause}
+            AND (
+                url ILIKE '%wget %' OR query_string ILIKE '%wget %' OR
+                url ILIKE '%curl %' OR query_string ILIKE '%curl %' OR
+                url ILIKE '%cat %' OR query_string ILIKE '%cat %' OR
+                url ILIKE '%ls %' OR query_string ILIKE '%ls %' OR
+                url ILIKE '%;%' OR query_string ILIKE '%;%' OR
+                url ILIKE '%|%' OR query_string ILIKE '%|%' OR
+                url ILIKE '%&&%' OR query_string ILIKE '%&&%'
+            )
+        """
+        results = self.storage.execute_query(query, params)
+        findings = []
+        for r in results:
+            evidence_str = f"URL: {r['url']}"
+            if r['query_string']:
+                evidence_str += f", Query: {r['query_string']}"
+            findings.append({
+                "severity": "critical",
+                "type": "command_injection",
+                "ip": r["ip"],
+                "evidence": [f"Potential command injection detected in {evidence_str}"]
+            })
+        return findings
+
+    def _detect_path_traversal(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+        query = f"""
+            SELECT ip, url, query_string
+            FROM log_entries
+            {where_clause}
+            AND (
+                url ILIKE '%../%' OR query_string ILIKE '%../%' OR
+                url ILIKE '%%2e%2e%2f%' OR query_string ILIKE '%%2e%2e%2f%' OR
+                url ILIKE '%%2e%2e/%' OR query_string ILIKE '%%2e%2e/%' OR
+                url ILIKE '%..%2f%' OR query_string ILIKE '%..%2f%'
+            )
+        """
+        results = self.storage.execute_query(query, params)
+        findings = []
+        for r in results:
+            evidence_str = f"URL: {r['url']}"
+            if r['query_string']:
+                evidence_str += f", Query: {r['query_string']}"
+            findings.append({
+                "severity": "high",
+                "type": "path_traversal",
+                "ip": r["ip"],
+                "evidence": [f"Path traversal sequence detected in {evidence_str}"]
             })
         return findings
 
@@ -162,6 +220,8 @@ class SecurityAnalyzer:
         findings.extend(self._detect_sqli(where_condition, tuple(params)))
         findings.extend(self._detect_xss(where_condition, tuple(params)))
         findings.extend(self._detect_scanners(where_condition, tuple(params)))
+        findings.extend(self._detect_command_injection(where_condition, tuple(params)))
+        findings.extend(self._detect_path_traversal(where_condition, tuple(params)))
 
         return findings
 
@@ -208,22 +268,26 @@ class SecurityAnalyzer:
         # Cap score at 100, calculate classification
         results = []
         for ip, stats in ip_stats.items():
-            stats['score'] = min(100, stats['score'])
+            stats['risk_score'] = min(100, stats['score'])
 
-            if stats['score'] >= 80:
-                stats['classification'] = 'critical'
-            elif stats['score'] >= 50:
-                stats['classification'] = 'high'
-            elif stats['score'] >= 20:
-                stats['classification'] = 'medium'
+            # The issue asked for risk_score and severity explicitly
+            # We rename classification to severity and score to risk_score
+            stats['severity'] = stats.get('classification')
+
+            if stats['risk_score'] >= 80:
+                stats['severity'] = 'critical'
+            elif stats['risk_score'] >= 50:
+                stats['severity'] = 'high'
+            elif stats['risk_score'] >= 20:
+                stats['severity'] = 'medium'
             else:
-                stats['classification'] = 'low'
+                stats['severity'] = 'low'
 
-            stats['attack_signatures'] = list(stats['attack_signatures'])
+            stats['signatures'] = list(stats['attack_signatures'])
             results.append(stats)
 
         # Sort by highest score first
-        return sorted(results, key=lambda x: x['score'], reverse=True)
+        return sorted(results, key=lambda x: x['risk_score'], reverse=True)
 
     def get_overview(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -246,7 +310,7 @@ class SecurityAnalyzer:
 
         risk_dist = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
         for ip in suspicious_ips:
-            cls = ip.get('classification', 'low')
+            cls = ip.get('severity', 'low')
             risk_dist[cls] = risk_dist.get(cls, 0) + 1
 
         return {
