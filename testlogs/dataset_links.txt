@@ -1,0 +1,6 @@
+https://www.kaggle.com/datasets/souhagaa/nasa-access-log-dataset?utm_source=chatgpt.com&select=log_1.tsv
+https://github.com/logpai/loghub?utm_source=chatgpt.com
+https://github.com/ocatak/apache-http-logs?utm_source=chatgpt.com
+https://www.kaggle.com/datasets/eliasdabbas/web-server-access-logs?utm_source=chatgpt.com&select=access.log
+https://github.com/elastic/examples/tree/master/Common%20Data%20Formats?utm_source=chatgpt.com
+https://github.com/sbousseaden/EVTX-ATTACK-SAMPLES?utm_source=chatgpt.com
