@@ -1,6 +1,8 @@
 import { type FilterState } from '../context/FilterContext';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1/analytics';
+  const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.origin.replace('-3000.app.github.dev', '-8000.app.github.dev')}/api/v1/analytics`;
 
 /**
  * Builds query parameters string from a filters object and any additional parameters.
@@ -33,6 +35,7 @@ export async function fetchApi<T>(endpoint: string, filters: FilterState = {}, a
   const queryString = buildQueryString(filters, additionalParams);
   const url = `${API_BASE_URL}${endpoint}${queryString}`;
 
+  console.log('API Request:', url);
   const response = await fetch(url);
 
   if (!response.ok) {

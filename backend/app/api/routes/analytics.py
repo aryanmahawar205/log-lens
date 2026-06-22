@@ -175,3 +175,93 @@ async def get_status_code_groups(filters: dict = Depends(get_filters)):
 async def get_visitors_extended(filters: dict = Depends(get_filters)):
     """Get extended visitor analytics (browser and OS distribution)."""
     return analytics_engine.get_extended_visitor_analytics(filters)
+
+@router.get("/logs")
+async def get_logs(
+    limit: int = Query(50, ge=1),
+    offset: int = Query(0, ge=0),
+    sort_by: str = Query("timestamp"),
+    sort_desc: bool = Query(True),
+    filters: dict = Depends(get_filters)
+):
+    """
+    Raw log explorer endpoint with pagination, filtering and sorting.
+    """
+
+    allowed_columns = {
+        "timestamp",
+        "ip",
+        "method",
+        "status_code",
+        "url",
+        "response_time_ms"
+    }
+
+    if sort_by not in allowed_columns:
+        sort_by = "timestamp"
+
+    order = "DESC" if sort_desc else "ASC"
+
+    where_clauses = []
+    params = []
+
+    if filters.get("ip"):
+        where_clauses.append("ip = ?")
+        params.append(filters["ip"])
+
+    if filters.get("url"):
+        where_clauses.append("url LIKE ?")
+        params.append(f"%{filters['url']}%")
+
+    if filters.get("user_agent"):
+        where_clauses.append("user_agent LIKE ?")
+        params.append(f"%{filters['user_agent']}%")
+
+    if filters.get("status_code"):
+        where_clauses.append("status_code = ?")
+        params.append(filters["status_code"])
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT
+            timestamp,
+            ip,
+            method,
+            status_code,
+            url,
+            response_time_ms,
+            user_agent
+        FROM log_entries
+        {where_sql}
+        ORDER BY {sort_by} {order}
+        LIMIT ?
+        OFFSET ?
+    """
+
+    rows = storage.execute_query(
+        query,
+        tuple(params + [limit, offset])
+    )
+
+    count_query = f"""
+        SELECT COUNT(*) as total
+        FROM log_entries
+        {where_sql}
+    """
+
+    total_result = storage.execute_query(
+        count_query,
+        tuple(params)
+    )
+
+    total = total_result[0]["total"] if total_result else 0
+
+    return {
+        "logs": rows,
+        "total": total,
+        "page_size": limit,
+        "offset": offset
+    }

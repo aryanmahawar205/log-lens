@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useFilter } from '../context/FilterContext';
+import { useFilterContext } from '../context/FilterContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import { AlertTriangle, Shield, ShieldAlert, ShieldCheck, Activity } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.protocol}//${window.location.hostname.replace('-3000.', '-8000.')}/api/v1/analytics`;
 
 export function SecurityAnalytics() {
-  const { filters } = useFilter();
+  const { filters } = useFilterContext();
   const [overview, setOverview] = useState<any>(null);
   const [findings, setFindings] = useState<any[]>([]);
   const [attackTrends, setAttackTrends] = useState<any[]>([]);
@@ -15,16 +19,16 @@ export function SecurityAnalytics() {
     const fetchData = async () => {
       try {
         const queryParams = new URLSearchParams();
-        if (filters.dateRange?.start) queryParams.append('start_date', filters.dateRange.start);
-        if (filters.dateRange?.end) queryParams.append('end_date', filters.dateRange.end);
+        if (filters.start_date) queryParams.append('start_date', filters.start_date);
+        if (filters.end_date) queryParams.append('end_date', filters.end_date);
 
         const qString = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
         const [ovRes, finRes, trRes, ipRes] = await Promise.all([
-          fetch(`http://localhost:8000/api/v1/analytics/security/overview${qString}`),
-          fetch(`http://localhost:8000/api/v1/analytics/security/findings${qString}`),
-          fetch(`http://localhost:8000/api/v1/analytics/security/attack-trends${qString}`),
-          fetch(`http://localhost:8000/api/v1/analytics/security/suspicious-ips${qString}`)
+          fetch(`${API_BASE}/security/overview${qString}`),
+          fetch(`${API_BASE}/security/findings${qString}`),
+          fetch(`${API_BASE}/security/attack-trends${qString}`),
+          fetch(`${API_BASE}/security/suspicious-ips${qString}`)
         ]);
 
         setOverview(await ovRes.json());

@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.protocol}//${window.location.hostname.replace('-3000.', '-8000.')}/api/v1/analytics`;
+
 interface FileUploadProps {
   onSuccess?: () => void;
 }
@@ -45,7 +49,7 @@ export function FileUpload({ onSuccess }: FileUploadProps) {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/analytics/upload', {
+      const response = await fetch(`${API_BASE}/upload`, {
         method: 'POST',
         body: formData,
       });

@@ -6,16 +6,27 @@ import { useFilterContext } from '../context/FilterContext';
 import { fetchApi } from '../utils/api';
 import { Activity, Users, Globe, HardDrive, Clock, AlertTriangle } from 'lucide-react';
 
+// interface DashboardSummary {
+//   total_requests: number;
+//   hits: number;
+//   unique_visitors: number;
+//   sessions: number;
+//   returning_visitors: number;
+//   pages_per_session: number;
+//   avg_session_duration_sec: number;
+//   total_bytes: number;
+//   error_rate?: number; // Might need calculation
+// }
+
 interface DashboardSummary {
   total_requests: number;
   hits: number;
   unique_visitors: number;
-  sessions: number;
+  total_sessions: number;
   returning_visitors: number;
-  pages_per_session: number;
+  avg_pages_per_session: number;
   avg_session_duration_sec: number;
   total_bytes: number;
-  error_rate?: number; // Might need calculation
 }
 
 export function Dashboard() {
@@ -63,31 +74,31 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard
           title="Total Requests"
-          value={summary.total_requests.toLocaleString()}
+          value={(summary.total_requests ?? 0).toLocaleString()}
           icon={Activity}
           valueColor="text-blue-400"
         />
         <MetricCard
           title="Unique Visitors"
-          value={summary.unique_visitors.toLocaleString()}
+          value={(summary.unique_visitors ?? 0).toLocaleString()}
           icon={Users}
           valueColor="text-emerald-400"
         />
         <MetricCard
           title="Sessions"
-          value={summary.sessions.toLocaleString()}
+          value={(summary.total_sessions ?? 0).toLocaleString()}
           icon={Globe}
           valueColor="text-purple-400"
         />
         <MetricCard
           title="Bandwidth"
-          value={formatBytes(summary.total_bytes)}
+          value={formatBytes(summary.total_bytes ?? 0)}
           icon={HardDrive}
           valueColor="text-orange-400"
         />
         <MetricCard
           title="Avg Session Duration"
-          value={`${Math.round(summary.avg_session_duration_sec)}s`}
+          value={`${Math.round(summary.avg_session_duration_sec ?? 0)}s`}
           icon={Clock}
           valueColor="text-teal-400"
         />
