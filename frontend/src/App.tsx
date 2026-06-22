@@ -8,25 +8,28 @@ import { VisitorAnalytics } from './pages/VisitorAnalytics';
 import { LogExplorer } from './pages/LogExplorer';
 import { SecurityAnalytics } from './pages/SecurityAnalytics';
 import { FilterProvider } from './context/FilterContext';
+import { DatasetProvider } from './context/DatasetContext';
 
 function App() {
   return (
-    <FilterProvider>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/traffic" element={<TrafficAnalytics />} />
-            <Route path="/performance" element={<PerformanceAnalytics />} />
-            <Route path="/urls" element={<UrlAnalytics />} />
-            <Route path="/visitors" element={<VisitorAnalytics />} />
-            <Route path="/security" element={<SecurityAnalytics />} />
-            <Route path="/explorer" element={<LogExplorer />} />
-          </Routes>
-        </Layout>
-      </Router>
-    </FilterProvider>
+    <DatasetProvider>
+      <FilterProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/traffic" element={<TrafficAnalytics />} />
+              <Route path="/performance" element={<PerformanceAnalytics />} />
+              <Route path="/urls" element={<UrlAnalytics />} />
+              <Route path="/visitors" element={<VisitorAnalytics />} />
+              <Route path="/security" element={<SecurityAnalytics />} />
+              <Route path="/explorer" element={<LogExplorer />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </FilterProvider>
+    </DatasetProvider>
   );
 }
 

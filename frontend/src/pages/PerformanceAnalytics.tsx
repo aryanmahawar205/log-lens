@@ -6,11 +6,14 @@ import { DataTable, type ColumnDef } from '../components/ui/DataTable';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { CustomLineChart } from '../components/charts/CustomLineChart';
 import { useFilterContext } from '../context/FilterContext';
+import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
 import { Clock, Zap } from 'lucide-react';
 
 export function PerformanceAnalytics() {
   const { filters } = useFilterContext();
+  const { selectedDataset } = useDatasetContext();
+  if (!selectedDataset) return null;
   const [metrics, setMetrics] = useState<any>(null);
   const [extended, setExtended] = useState<any>(null);
 
@@ -36,7 +39,7 @@ export function PerformanceAnalytics() {
 
   useEffect(() => {
     loadData();
-  }, [filters]);
+  }, [filters, selectedDataset]);
 
   if (loading && !metrics) return <PageContainer title="Performance"><LoadingState /></PageContainer>;
   if (error) return <PageContainer title="Performance"><ErrorState error={error} retry={loadData} /></PageContainer>;
