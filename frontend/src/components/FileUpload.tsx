@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useDatasetContext } from '../context/DatasetContext';
 
 const API_BASE =
   import.meta.env.VITE_API_URL ||
@@ -14,6 +15,7 @@ export function FileUpload({ onSuccess }: FileUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const { refreshDatasets } = useDatasetContext();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +63,8 @@ export function FileUpload({ onSuccess }: FileUploadProps) {
       }
 
       setResult(data);
+      // Pass true to autoSelectLatest since we just uploaded it
+      await refreshDatasets(true);
       if (onSuccess) onSuccess();
 
     } catch (err) {

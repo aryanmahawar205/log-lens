@@ -3,20 +3,9 @@ import { PageContainer } from '../components/ui/PageContainer';
 import { MetricCard } from '../components/ui/MetricCard';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { useFilterContext } from '../context/FilterContext';
+import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
-import { Activity, Users, Globe, HardDrive, Clock, AlertTriangle } from 'lucide-react';
-
-// interface DashboardSummary {
-//   total_requests: number;
-//   hits: number;
-//   unique_visitors: number;
-//   sessions: number;
-//   returning_visitors: number;
-//   pages_per_session: number;
-//   avg_session_duration_sec: number;
-//   total_bytes: number;
-//   error_rate?: number; // Might need calculation
-// }
+import { Activity, Users, Globe, HardDrive, Clock, AlertTriangle, FileText, CheckCircle, Database } from 'lucide-react';
 
 interface DashboardSummary {
   total_requests: number;
@@ -31,11 +20,15 @@ interface DashboardSummary {
 
 export function Dashboard() {
   const { filters } = useFilterContext();
+  const { selectedDataset } = useDatasetContext();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const loadData = async () => {
+    // Only load if a dataset is selected
+    if (!selectedDataset) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -50,7 +43,9 @@ export function Dashboard() {
 
   useEffect(() => {
     loadData();
-  }, [filters]);
+  }, [filters, selectedDataset]);
+
+  if (!selectedDataset) return null; // Layout handles empty state
 
   if (loading) return <PageContainer title="Dashboard"><LoadingState message="Loading dashboard overview..." /></PageContainer>;
   if (error) return <PageContainer title="Dashboard"><ErrorState error={error} retry={loadData} /></PageContainer>;
@@ -71,6 +66,45 @@ export function Dashboard() {
 
   return (
     <PageContainer title="Dashboard" description="High-level overview of your web traffic and analytics.">
+
+      {/* Dataset Details Panel */}
+      <div className="mb-6 bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between">
+        <div className="flex items-center mb-4 md:mb-0">
+          <div className="p-3 bg-blue-500/10 rounded-lg mr-4 border border-blue-500/20">
+            <FileText className="w-6 h-6 text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">{selectedDataset.filename}</h3>
+            <p className="text-sm text-gray-400 flex items-center mt-1">
+              <Database className="w-3.5 h-3.5 mr-1" />
+              Uploaded on {new Date(selectedDataset.uploaded_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Format</p>
+            <p className="font-medium text-gray-200">{selectedDataset.format}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Parser</p>
+            <p className="font-medium text-gray-200">{selectedDataset.parser_used}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Confidence</p>
+            <p className="font-medium text-emerald-400 flex items-center">
+              {Math.round(selectedDataset.confidence * 100)}%
+              <CheckCircle className="w-3.5 h-3.5 ml-1" />
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Entries</p>
+            <p className="font-medium text-blue-400">{selectedDataset.total_entries.toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard
           title="Total Requests"

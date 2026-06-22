@@ -17,6 +17,14 @@ export function buildQueryString(filters: FilterState, additionalParams: Record<
     }
   });
 
+  // Automatically append dataset upload_id if not present in filters
+  if (filters.upload_id === undefined && additionalParams.upload_id === undefined) {
+    const datasetId = localStorage.getItem('loglens_dataset_id');
+    if (datasetId) {
+      params.append('upload_id', datasetId);
+    }
+  }
+
   // Add specific endpoint parameters
   Object.entries(additionalParams).forEach(([key, value]) => {
     if (value !== undefined && value !== '') {

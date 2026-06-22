@@ -1,25 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Filter, Calendar, Globe, AlertCircle, Bot, X, UploadCloud, Database } from 'lucide-react';
+import { useState } from 'react';
+import { Filter, Calendar, Globe, AlertCircle, Bot, X, UploadCloud, Database, Trash2 } from 'lucide-react';
 import { useFilterContext } from '../context/FilterContext';
+import { useDatasetContext } from '../context/DatasetContext';
 import { FileUpload } from './FileUpload';
 
 export function TopBar() {
   const { filters, setFilter, clearFilters, hasActiveFilters } = useFilterContext();
+  const { datasets, selectedDataset, selectDataset, deleteDataset, refreshDatasets } = useDatasetContext();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [datasets, setDatasets] = useState<any[]>([]);
 
-  useEffect(() => {
-    // Determine API URL based on environment/location to avoid hardcoding localhost
-    const apiUrl = window.location.hostname === 'localhost'
-      ? 'http://localhost:8000/api/v1/analytics/datasets'
-      : '/api/v1/analytics/datasets';
-
-    fetch(apiUrl)
-      .then(res => res.json())
-      .then(data => setDatasets(data))
-      .catch(err => console.error("Failed to fetch datasets", err));
-  }, [isUploadOpen]); // Refetch datasets when upload modal closes
+  const handleDelete = async () => {
+    if (selectedDataset && window.confirm('Are you sure you want to delete this dataset?')) {
+      await deleteDataset(selectedDataset.id);
+    }
+  };
 
   return (
     <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-6 shrink-0 relative z-10">
@@ -28,17 +23,28 @@ export function TopBar() {
           <div className="flex items-center bg-gray-800 rounded-md px-3 py-1.5 border border-gray-700">
             <Database className="w-4 h-4 text-blue-400 mr-2" />
             <select
-              className="bg-transparent text-sm text-gray-200 outline-none"
-              value={filters.upload_id || ''}
-              onChange={(e) => setFilter('upload_id', e.target.value ? Number(e.target.value) : undefined)}
+              className="bg-transparent text-sm text-gray-200 outline-none w-48 truncate"
+              value={selectedDataset?.id || ''}
+              onChange={(e) => selectDataset(Number(e.target.value))}
             >
-              <option value="">All Datasets</option>
-              {datasets.map((ds: any) => (
+              {datasets.map((ds) => (
                 <option key={ds.id} value={ds.id}>
-                  {ds.filename} ({new Date(ds.uploaded_at).toLocaleDateString()})
+                  {ds.filename} ({new Date(ds.uploaded_at).toLocaleDateString()}) - {ds.total_entries} entries
                 </option>
               ))}
             </select>
+            <button
+              onClick={handleDelete}
+              className="ml-2 text-gray-400 hover:text-red-400 transition-colors"
+              title="Delete Dataset"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {selectedDataset && (
+          <div className="ml-4 px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full border border-blue-800/50">
+            Active: {selectedDataset.filename}
           </div>
         )}
       </div>
@@ -165,8 +171,8 @@ export function TopBar() {
               </button>
             </div>
             <div className="p-6">
-              <FileUpload onSuccess={() => {
-                // Optionally reload data or show toast
+              <FileUpload onSuccess={async () => {
+                await refreshDatasets();
                 setTimeout(() => setIsUploadOpen(false), 2000);
               }} />
             </div>

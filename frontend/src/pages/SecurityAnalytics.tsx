@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useFilterContext } from '../context/FilterContext';
+import { useDatasetContext } from '../context/DatasetContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -10,6 +11,8 @@ const API_BASE =
 
 export function SecurityAnalytics() {
   const { filters } = useFilterContext();
+  const { selectedDataset } = useDatasetContext();
+  if (!selectedDataset) return null;
   const [overview, setOverview] = useState<any>(null);
   const [findings, setFindings] = useState<any[]>([]);
   const [attackTrends, setAttackTrends] = useState<any[]>([]);
@@ -52,7 +55,7 @@ export function SecurityAnalytics() {
     };
 
     fetchData();
-  }, [filters]);
+  }, [filters, selectedDataset]);
 
   const COLORS = {
     critical: '#ef4444',
