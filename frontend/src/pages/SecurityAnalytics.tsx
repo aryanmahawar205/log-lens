@@ -31,10 +31,21 @@ export function SecurityAnalytics() {
           fetch(`${API_BASE}/security/suspicious-ips${qString}`)
         ]);
 
-        setOverview(await ovRes.json());
-        setFindings(await finRes.json());
-        setAttackTrends(await trRes.json());
-        setSuspiciousIps(await ipRes.json());
+        setOverview(
+          ovRes.ok ? await ovRes.json() : {}
+        );
+
+        setFindings(
+          finRes.ok ? await finRes.json() : []
+        );
+
+        setAttackTrends(
+          trRes.ok ? await trRes.json() : []
+        );
+
+        setSuspiciousIps(
+          ipRes.ok ? await ipRes.json() : []
+        );  
       } catch (error) {
         console.error('Failed to fetch security analytics:', error);
       }
@@ -183,14 +194,14 @@ export function SecurityAnalytics() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-1 rounded text-xs font-semibold" style={{
-                        backgroundColor: `${COLORS[ip.classification as keyof typeof COLORS]}20`,
-                        color: COLORS[ip.classification as keyof typeof COLORS]
-                      }}>
-                        {ip.classification.toUpperCase()}
+                        backgroundColor: `${(COLORS[ip.classification as keyof typeof COLORS] || '#6b7280')}20`,
+                        color: COLORS[ip.classification as keyof typeof COLORS] || '#6b7280'
+                        }}>
+                          {(ip.classification ?? 'unknown').toUpperCase()}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-400">
-                      {ip.attack_signatures.join(', ')}
+                      {(ip.attack_signatures ?? []).join(', ')}
                     </td>
                     <td className="px-4 py-3 text-gray-400">
                       {ip.critical_count}
@@ -224,13 +235,13 @@ export function SecurityAnalytics() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
-                    <h4 className="font-bold text-gray-200 capitalize">{finding.type.replace('_', ' ')}</h4>
+                    <h4 className="font-bold text-gray-200 capitalize">{(finding.type ?? 'unknown').replace('_', ' ')}</h4>
                     <span className="text-xs font-mono bg-gray-800 px-2 py-1 rounded text-gray-300">IP: {finding.ip}</span>
                   </div>
                   <div className="mt-2 text-sm text-gray-400">
                     <p className="font-semibold text-gray-300 mb-1">Evidence:</p>
                     <ul className="list-disc pl-5 space-y-1">
-                      {finding.evidence.map((ev: string, i: number) => (
+                      {(finding.evidence ?? []).map((ev: string, i: number) => (
                         <li key={i} className="font-mono text-xs break-all">{ev}</li>
                       ))}
                     </ul>
