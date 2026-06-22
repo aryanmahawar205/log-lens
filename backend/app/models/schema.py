@@ -7,6 +7,7 @@ class NormalizedLogEntry(BaseModel):
     Common schema for all parsed log entries.
     Every parser should emit this structure to the normalization layer.
     """
+    upload_id: Optional[int] = Field(None, description="The dataset upload ID this entry belongs to")
     timestamp: datetime = Field(..., description="The time the request was received")
     ip: str = Field(..., description="Client IP address")
     method: str = Field(..., description="HTTP method (e.g., GET, POST)")

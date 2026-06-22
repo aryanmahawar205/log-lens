@@ -3,13 +3,6 @@ from typing import Optional, Dict, Any, List
 from app.analytics.engine import AnalyticsEngine
 from app.parsers.detector import FormatDetector
 from app.parsers.registry import ParserRegistry
-# Importing specific parsers ensures they are registered
-import app.parsers.apache
-import app.parsers.apache_error
-import app.parsers.nginx_access
-import app.parsers.nginx_error
-import app.parsers.iis
-import app.parsers.clf
 
 import tempfile
 import os
@@ -23,7 +16,10 @@ os.makedirs("data", exist_ok=True)
 storage = DuckDBStorage("data/analytics.duckdb")
 analytics_engine = AnalyticsEngine(storage=storage)
 
+from datetime import datetime
+
 def get_filters(
+    upload_id: Optional[int] = Query(None),
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     ip: Optional[str] = Query(None),
@@ -35,6 +31,7 @@ def get_filters(
 ) -> Dict[str, Any]:
     """Dependency to extract common filters from query parameters."""
     return {
+        "upload_id": upload_id,
         "start_date": start_date,
         "end_date": end_date,
         "ip": ip,
@@ -44,6 +41,33 @@ def get_filters(
         "user_agent": user_agent,
         "bot_classification": bot_classification
     }
+
+@router.get("/datasets")
+async def get_datasets():
+    """Get all available datasets (uploads)."""
+    return storage.execute_query("SELECT * FROM uploads ORDER BY uploaded_at DESC")
+
+@router.get("/datasets/{dataset_id}")
+async def get_dataset(dataset_id: int):
+    """Get a specific dataset."""
+    result = storage.execute_query("SELECT * FROM uploads WHERE id = ?", (dataset_id,))
+    if not result:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+    return result[0]
+
+@router.delete("/datasets/{dataset_id}")
+async def delete_dataset(dataset_id: int):
+    """Delete a dataset and its logs."""
+    storage.execute_query("DELETE FROM log_entries WHERE upload_id = ?", (dataset_id,))
+    storage.execute_query("DELETE FROM uploads WHERE id = ?", (dataset_id,))
+    return {"message": "Dataset deleted successfully"}
+
+@router.delete("/reset")
+async def reset_database():
+    """Reset the database for testing and validation."""
+    storage.execute_query("DELETE FROM log_entries")
+    storage.execute_query("DELETE FROM uploads")
+    return {"message": "Database reset successfully"}
 
 @router.post("/upload")
 async def upload_log_file(file: UploadFile = File(...)):
@@ -72,6 +96,9 @@ async def upload_log_file(file: UploadFile = File(...)):
         if not parser:
             raise HTTPException(status_code=500, detail=f"Parser {format_name} not found.")
 
+        # Generate new upload ID (Unix timestamp or sequence)
+        upload_id = int(datetime.now().timestamp() * 1000)
+
         # Parse and ingest in batches to minimize memory footprint
         batch_size = 10000
         current_batch = []
@@ -80,17 +107,24 @@ async def upload_log_file(file: UploadFile = File(...)):
         for entry in parser.parse_file(tmp_path):
             current_batch.append(entry)
             if len(current_batch) >= batch_size:
-                analytics_engine.ingest_entries(current_batch)
+                analytics_engine.ingest_entries(current_batch, upload_id)
                 total_ingested += len(current_batch)
                 current_batch.clear()
 
         # Ingest remaining
         if current_batch:
-            analytics_engine.ingest_entries(current_batch)
+            analytics_engine.ingest_entries(current_batch, upload_id)
             total_ingested += len(current_batch)
+
+        # Record upload in uploads table
+        storage.execute_query("""
+            INSERT INTO uploads (id, filename, format, uploaded_at, total_entries, parser_used, confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (upload_id, file.filename, format_name, datetime.now(), total_ingested, format_name, confidence))
 
         return {
             "message": f"Successfully ingested {total_ingested} log entries",
+            "upload_id": upload_id,
             "format": format_name,
             "confidence": confidence
         }

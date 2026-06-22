@@ -23,6 +23,10 @@ class FormatDetector:
         parsers = ParserRegistry.get_all_parsers()
 
         for name, parser in parsers.items():
+            # Skip the fallback inference parser during detection to see if a strict match works
+            if name == "UNKNOWN_FORMAT":
+                continue
+
             successful_parses = 0
             for line in sample_lines:
                 try:
@@ -43,4 +47,4 @@ class FormatDetector:
         if best_confidence > 0.0:
             return best_parser_name, best_confidence
 
-        return None, 0.0
+        return "UNKNOWN_FORMAT", 0.0

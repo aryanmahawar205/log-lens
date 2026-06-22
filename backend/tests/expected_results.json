@@ -1,0 +1,8 @@
+{
+  "tiny_6_line.log": {
+    "total_requests": 6,
+    "unique_visitors": 3,
+    "sessions": 3,
+    "error_rate": 33.33333333333333
+  }
+}
