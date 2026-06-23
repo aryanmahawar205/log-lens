@@ -1,6 +1,8 @@
 from typing import Dict, Any, List, Optional
 from app.storage.base import BaseStorage
 from app.analytics.query_builder import QueryBuilder
+from app.security.sigma_engine import SigmaEngine
+from app.models.schema import SecurityFinding
 
 class SecurityAnalyzer:
     """
@@ -9,11 +11,13 @@ class SecurityAnalyzer:
 
     def __init__(self, storage: BaseStorage):
         self.storage = storage
+        self.sigma_engine = SigmaEngine()
 
-    def _detect_brute_force(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_brute_force(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
             SELECT ip, url as target_endpoint, COUNT(*) as attempt_count,
-                   SUM(CASE WHEN status_code = 401 THEN 1 ELSE 0 END) as failed_logins
+                   SUM(CASE WHEN status_code = 401 THEN 1 ELSE 0 END) as failed_logins,
+                   MIN(timestamp) as first_seen
             FROM log_entries
             {where_clause}
             AND (url ILIKE '%login%' OR url ILIKE '%signin%' OR url ILIKE '%auth%')
@@ -24,19 +28,21 @@ class SecurityAnalyzer:
         findings = []
         for r in results:
             findings.append({
+                "rule_id": "custom_brute_force",
+                "rule_title": "Brute Force Attempt",
                 "severity": "high" if r["failed_logins"] > 20 or r["attempt_count"] > 50 else "medium",
-                "type": "brute_force",
+                "dataset_id": upload_id,
+                "timestamp": r["first_seen"],
                 "ip": r["ip"],
-                "target_endpoint": r["target_endpoint"],
-                "attempt_count": r["attempt_count"],
-                "evidence": [f"{r['failed_logins']} failed logins, {r['attempt_count']} total attempts"]
+                "evidence": [f"{r['failed_logins']} failed logins, {r['attempt_count']} total attempts on {r['target_endpoint']}"]
             })
         return findings
 
-    def _detect_directory_enumeration(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_directory_enumeration(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
             SELECT ip, COUNT(DISTINCT url) as unique_paths, COUNT(*) as total_requests,
-                   SUM(CASE WHEN status_code = 404 THEN 1 ELSE 0 END) as not_found_count
+                   SUM(CASE WHEN status_code = 404 THEN 1 ELSE 0 END) as not_found_count,
+                   MIN(timestamp) as first_seen
             FROM log_entries
             {where_clause}
             AND (
@@ -50,16 +56,19 @@ class SecurityAnalyzer:
         findings = []
         for r in results:
             findings.append({
+                "rule_id": "custom_directory_enumeration",
+                "rule_title": "Directory Enumeration",
                 "severity": "high" if r["unique_paths"] > 10 or r["not_found_count"] > 20 else "medium",
-                "type": "directory_enumeration",
+                "dataset_id": upload_id,
+                "timestamp": r["first_seen"],
                 "ip": r["ip"],
                 "evidence": [f"Probed {r['unique_paths']} sensitive paths, {r['not_found_count']} 404s"]
             })
         return findings
 
-    def _detect_sqli(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_sqli(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string
+            SELECT ip, url, query_string, timestamp
             FROM log_entries
             {where_clause}
             AND (
@@ -79,16 +88,19 @@ class SecurityAnalyzer:
             if r['query_string']:
                 evidence_str += f", Query: {r['query_string']}"
             findings.append({
+                "rule_id": "custom_sqli",
+                "rule_title": "SQL Injection Attempt",
                 "severity": "critical",
-                "type": "sql_injection",
+                "dataset_id": upload_id,
+                "timestamp": r["timestamp"],
                 "ip": r["ip"],
                 "evidence": [evidence_str]
             })
         return findings
 
-    def _detect_xss(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_xss(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string
+            SELECT ip, url, query_string, timestamp
             FROM log_entries
             {where_clause}
             AND (
@@ -106,17 +118,19 @@ class SecurityAnalyzer:
             if r['query_string']:
                 evidence_str += f", Query: {r['query_string']}"
             findings.append({
+                "rule_id": "custom_xss",
+                "rule_title": "Cross-Site Scripting Attempt",
                 "severity": "high",
-                "type": "xss",
+                "dataset_id": upload_id,
+                "timestamp": r["timestamp"],
                 "ip": r["ip"],
-                "affected_endpoints": [r['url']],
                 "evidence": [evidence_str]
             })
         return findings
 
-    def _detect_scanners(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_scanners(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, user_agent, COUNT(*) as request_count
+            SELECT ip, user_agent, COUNT(*) as request_count, MIN(timestamp) as first_seen
             FROM log_entries
             {where_clause}
             AND (
@@ -137,16 +151,19 @@ class SecurityAnalyzer:
         findings = []
         for r in results:
             findings.append({
+                "rule_id": "custom_scanner",
+                "rule_title": "Security Scanner Detected",
                 "severity": "medium",
-                "type": "scanner",
+                "dataset_id": upload_id,
+                "timestamp": r["first_seen"],
                 "ip": r["ip"],
                 "evidence": [f"Scanner UA: {r['user_agent']}, requests: {r['request_count']}"]
             })
         return findings
 
-    def _detect_command_injection(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_command_injection(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string
+            SELECT ip, url, query_string, timestamp
             FROM log_entries
             {where_clause}
             AND (
@@ -166,23 +183,26 @@ class SecurityAnalyzer:
             if r['query_string']:
                 evidence_str += f", Query: {r['query_string']}"
             findings.append({
+                "rule_id": "custom_command_injection",
+                "rule_title": "Command Injection Attempt",
                 "severity": "critical",
-                "type": "command_injection",
+                "dataset_id": upload_id,
+                "timestamp": r["timestamp"],
                 "ip": r["ip"],
                 "evidence": [f"Potential command injection detected in {evidence_str}"]
             })
         return findings
 
-    def _detect_path_traversal(self, where_clause: str, params: tuple) -> List[Dict[str, Any]]:
+    def _detect_path_traversal(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string
+            SELECT ip, url, query_string, timestamp
             FROM log_entries
             {where_clause}
             AND (
                 url ILIKE '%../%' OR query_string ILIKE '%../%' OR
                 url ILIKE '%%2e%2e%2f%' OR query_string ILIKE '%%2e%2e%2f%' OR
                 url ILIKE '%%2e%2e/%' OR query_string ILIKE '%%2e%2e/%' OR
-                url ILIKE '%..%2f%' OR query_string ILIKE '%..%2f%'
+                url ILIKE '%..%2f%' OR query_string ILIKE '%%..%2f%'
             )
         """
         results = self.storage.execute_query(query, params)
@@ -192,8 +212,11 @@ class SecurityAnalyzer:
             if r['query_string']:
                 evidence_str += f", Query: {r['query_string']}"
             findings.append({
+                "rule_id": "custom_path_traversal",
+                "rule_title": "Path Traversal Attempt",
                 "severity": "high",
-                "type": "path_traversal",
+                "dataset_id": upload_id,
+                "timestamp": r["timestamp"],
                 "ip": r["ip"],
                 "evidence": [f"Path traversal sequence detected in {evidence_str}"]
             })
@@ -207,6 +230,7 @@ class SecurityAnalyzer:
             filters = {}
 
         where_condition, params = QueryBuilder.build_filters(filters)
+        upload_id = filters.get("upload_id", 0)
 
         # Adjust where clause structure for queries
         if where_condition:
@@ -215,13 +239,17 @@ class SecurityAnalyzer:
             where_condition = " WHERE 1=1 "
 
         findings = []
-        findings.extend(self._detect_brute_force(where_condition, tuple(params)))
-        findings.extend(self._detect_directory_enumeration(where_condition, tuple(params)))
-        findings.extend(self._detect_sqli(where_condition, tuple(params)))
-        findings.extend(self._detect_xss(where_condition, tuple(params)))
-        findings.extend(self._detect_scanners(where_condition, tuple(params)))
-        findings.extend(self._detect_command_injection(where_condition, tuple(params)))
-        findings.extend(self._detect_path_traversal(where_condition, tuple(params)))
+        findings.extend(self._detect_brute_force(where_condition, tuple(params), upload_id))
+        findings.extend(self._detect_directory_enumeration(where_condition, tuple(params), upload_id))
+        findings.extend(self._detect_sqli(where_condition, tuple(params), upload_id))
+        findings.extend(self._detect_xss(where_condition, tuple(params), upload_id))
+        findings.extend(self._detect_scanners(where_condition, tuple(params), upload_id))
+        findings.extend(self._detect_command_injection(where_condition, tuple(params), upload_id))
+        findings.extend(self._detect_path_traversal(where_condition, tuple(params), upload_id))
+
+        # Add Sigma findings
+        sigma_findings = self.sigma_engine.execute(self.storage, filters)
+        findings.extend(sigma_findings)
 
         return findings
 
@@ -262,17 +290,13 @@ class SecurityAnalyzer:
                 stats['score'] += 5
                 stats['low_count'] += 1
 
-            stats['attack_signatures'].add(finding['type'])
+            stats['attack_signatures'].add(finding.get('rule_title', finding.get('type', 'unknown')))
             stats['findings'].append(finding)
 
         # Cap score at 100, calculate classification
         results = []
         for ip, stats in ip_stats.items():
             stats['risk_score'] = min(100, stats['score'])
-
-            # The issue asked for risk_score and severity explicitly
-            # We rename classification to severity and score to risk_score
-            stats['severity'] = stats.get('classification')
 
             if stats['risk_score'] >= 80:
                 stats['severity'] = 'critical'
@@ -305,7 +329,7 @@ class SecurityAnalyzer:
             severity = f.get('severity', 'low')
             severity_dist[severity] = severity_dist.get(severity, 0) + 1
 
-            attack_type = f.get('type', 'unknown')
+            attack_type = f.get('rule_title', f.get('type', 'unknown'))
             type_dist[attack_type] = type_dist.get(attack_type, 0) + 1
 
         risk_dist = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}

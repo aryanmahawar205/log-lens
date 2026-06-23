@@ -60,7 +60,7 @@ export function Dashboard() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const errorRate = summary.total_requests > 0
+  const errorRate = summary && summary.total_requests > 0
     ? ((summary.total_requests - summary.hits) / summary.total_requests * 100).toFixed(2)
     : '0.00';
 
@@ -108,31 +108,31 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard
           title="Total Requests"
-          value={(summary.total_requests ?? 0).toLocaleString()}
+          value={(summary?.total_requests ?? 0).toLocaleString()}
           icon={Activity}
           valueColor="text-blue-400"
         />
         <MetricCard
           title="Unique Visitors"
-          value={(summary.unique_visitors ?? 0).toLocaleString()}
+          value={(summary?.unique_visitors ?? 0).toLocaleString()}
           icon={Users}
           valueColor="text-emerald-400"
         />
         <MetricCard
           title="Sessions"
-          value={(summary.total_sessions ?? 0).toLocaleString()}
+          value={(summary?.total_sessions ?? 0).toLocaleString()}
           icon={Globe}
           valueColor="text-purple-400"
         />
         <MetricCard
           title="Bandwidth"
-          value={formatBytes(summary.total_bytes ?? 0)}
+          value={formatBytes(summary?.total_bytes ?? 0)}
           icon={HardDrive}
           valueColor="text-orange-400"
         />
         <MetricCard
           title="Avg Session Duration"
-          value={`${Math.round(summary.avg_session_duration_sec ?? 0)}s`}
+          value={`${Math.round(summary?.avg_session_duration_sec ?? 0)}s`}
           icon={Clock}
           valueColor="text-teal-400"
         />

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 class NormalizedLogEntry(BaseModel):
@@ -22,3 +22,16 @@ class NormalizedLogEntry(BaseModel):
     host: Optional[str] = Field(None, description="Host header")
     virtual_host: Optional[str] = Field(None, description="Virtual host handling the request")
     protocol: Optional[str] = Field(None, description="HTTP protocol version")
+
+class SecurityFinding(BaseModel):
+    """
+    Standardized schema for security findings from any engine.
+    """
+    rule_id: str
+    rule_title: str
+    severity: str
+    dataset_id: int
+    timestamp: datetime
+    ip: str
+    evidence: List[str]
+    sigma_source: Optional[str] = None

@@ -17,6 +17,7 @@ class InferenceParser(BaseParser):
     URL_REGEX = re.compile(r'\s(/[^\s?]+)(\?[^\s]+)?\s')
     STATUS_CODE_REGEX = re.compile(r'\s([1-5][0-9]{2})\s')
     BYTES_REGEX = re.compile(r'\s([1-5][0-9]{2})\s+([0-9]+|-)\s')
+    LATENCY_REGEX = re.compile(r'\s([0-9]+(?:\.[0-9]+)?)(?:ms|µs|s)?\s*$')
 
     def parse_line(self, line: str) -> Optional[NormalizedLogEntry]:
         if not line:
@@ -30,6 +31,7 @@ class InferenceParser(BaseParser):
         bytes_sent = 0
         timestamp = datetime.now()
         user_agent = "Unknown"
+        response_time_ms = None
 
         # Try extract IP
         ip_match = self.IP_REGEX.search(line)
@@ -61,6 +63,37 @@ class InferenceParser(BaseParser):
             status_match = self.STATUS_CODE_REGEX.search(line)
             if status_match:
                 status_code = int(status_match.group(1))
+
+        # Try extract latency
+        latency_match = self.LATENCY_REGEX.search(line)
+        if latency_match:
+            try:
+                val = float(latency_match.group(1))
+                unit_match = re.search(r'(ms|µs|s)$', line.strip())
+                if unit_match:
+                    unit = unit_match.group(1)
+                    if unit == 's':
+                        response_time_ms = val * 1000
+                    elif unit == 'µs':
+                        response_time_ms = val / 1000
+                    else:
+                        response_time_ms = val
+                else:
+                    response_time_ms = val # Assume ms
+            except Exception:
+                pass
+
+        # Try extract user agent (loosely, anything in quotes at the end)
+        ua_matches = re.findall(r'"([^"]*)"', line)
+        if ua_matches:
+            # Often UA is the last or second to last quoted string
+            potential_ua = ua_matches[-1]
+            if "Mozilla" in potential_ua or "Opera" in potential_ua or "compatible" in potential_ua:
+                user_agent = potential_ua
+            elif len(ua_matches) > 1:
+                potential_ua = ua_matches[-2]
+                if "Mozilla" in potential_ua or "Opera" in potential_ua:
+                    user_agent = potential_ua
 
         # Try to find a date loosely, but if not we just use now
         # Very naive bracket date lookup
@@ -104,5 +137,6 @@ class InferenceParser(BaseParser):
             query_string=query_string,
             status_code=status_code,
             bytes_sent=bytes_sent,
-            user_agent=user_agent
+            user_agent=user_agent,
+            response_time_ms=response_time_ms
         )

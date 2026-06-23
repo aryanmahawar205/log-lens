@@ -27,6 +27,7 @@ class ApacheAccessParser(BaseParser):
         r'(?P<bytes_sent>\S+)\s+'         # Bytes
         r'"(?P<referrer>[^"]*)"\s+'       # Referer
         r'"(?P<user_agent>[^"]*)"'        # User-Agent
+        r'(?:\s+(?P<latency>\d+))?'       # Optional Latency (usually %D in microseconds)
     )
 
     def parse_line(self, line: str) -> Optional[NormalizedLogEntry]:
@@ -49,6 +50,11 @@ class ApacheAccessParser(BaseParser):
         url = url_parts[0]
         query_string = url_parts[1] if len(url_parts) > 1 else None
 
+        # Convert microseconds to milliseconds if present
+        response_time_ms = None
+        if data.get('latency'):
+            response_time_ms = float(data['latency']) / 1000.0
+
         return NormalizedLogEntry(
             timestamp=timestamp,
             ip=data['ip'],
@@ -59,5 +65,6 @@ class ApacheAccessParser(BaseParser):
             bytes_sent=bytes_sent,
             referrer=data['referrer'] if data['referrer'] != '-' else None,
             user_agent=data['user_agent'] if data['user_agent'] != '-' else None,
-            protocol=data['protocol']
+            protocol=data['protocol'],
+            response_time_ms=response_time_ms
         )

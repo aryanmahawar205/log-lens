@@ -62,21 +62,32 @@ class DuckDBStorage(BaseStorage):
         # Create view for sessionization (30 min timeout)
         self.conn.execute("""
             CREATE OR REPLACE VIEW log_sessions AS
-            WITH session_groups AS (
+            WITH base_logs AS (
+                SELECT *,
+                       COALESCE(user_agent, 'unknown') as ua_fixed
+                FROM log_entries
+            ),
+            prev_times AS (
                 SELECT
                     *,
-                    SUM(CASE WHEN prev_time IS NULL OR epoch(timestamp) - epoch(prev_time) > 1800 THEN 1 ELSE 0 END)
-                    OVER (PARTITION BY upload_id, ip, user_agent ORDER BY timestamp) AS session_id_num
-                FROM (
-                    SELECT
-                        *,
-                        LAG(timestamp) OVER (PARTITION BY upload_id, ip, user_agent ORDER BY timestamp) AS prev_time
-                    FROM log_entries
-                )
+                    LAG(timestamp) OVER (PARTITION BY upload_id, ip, ua_fixed ORDER BY timestamp) AS prev_time
+                FROM base_logs
+            ),
+            session_markers AS (
+                SELECT
+                    *,
+                    CASE WHEN prev_time IS NULL OR epoch(timestamp) - epoch(prev_time) > 1800 THEN 1 ELSE 0 END AS is_new_session
+                FROM prev_times
+            ),
+            session_groups AS (
+                SELECT
+                    *,
+                    SUM(is_new_session) OVER (PARTITION BY upload_id, ip, ua_fixed ORDER BY timestamp) AS session_id_num
+                FROM session_markers
             )
             SELECT
                 *,
-                COALESCE(upload_id, 0) || '-' || ip || '-' || coalesce(user_agent, 'unknown') || '-' || session_id_num AS session_id
+                COALESCE(upload_id, 0) || '-' || ip || '-' || ua_fixed || '-' || session_id_num AS session_id
             FROM session_groups
         """)
 

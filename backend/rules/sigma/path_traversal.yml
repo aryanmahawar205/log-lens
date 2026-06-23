@@ -1,0 +1,15 @@
+title: Path Traversal Attempt
+id: a8d5334c-5353-4874-884b-010f3c83407a
+status: experimental
+description: Detects potential path traversal attempts.
+logsource:
+    category: webserver
+detection:
+    selection:
+        url|contains:
+            - '../'
+            - '%2e%2e%2f'
+    condition: selection
+falsepositives:
+    - Legitimate paths
+level: high

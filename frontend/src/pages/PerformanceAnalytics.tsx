@@ -67,7 +67,7 @@ export function PerformanceAnalytics() {
           <DataTable
             data={metrics?.slowest_endpoints || []}
             columns={slowEndpointsColumns}
-            keyExtractor={(row) => row.url}
+            keyExtractor={(row) => row?.url || 'unknown'}
           />
         </ChartCard>
 

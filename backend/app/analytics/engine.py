@@ -63,7 +63,7 @@ class AnalyticsEngine:
                     MAX(timestamp) - MIN(timestamp) as duration
                 FROM log_sessions
                 {where_clause}
-                GROUP BY session_id, ip
+                GROUP BY session_id, ip, upload_id
             ),
             user_stats AS (
                 SELECT

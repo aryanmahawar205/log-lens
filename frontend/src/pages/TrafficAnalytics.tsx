@@ -51,9 +51,9 @@ export function TrafficAnalytics() {
     return bucket;
   };
 
-  const formattedTimeData = timeData.map(d => ({
+  const formattedTimeData = (timeData || []).map(d => ({
     ...d,
-    time_bucket: formatTimeBucket(d.time_bucket)
+    time_bucket: d.time_bucket ? formatTimeBucket(d.time_bucket) : 'N/A'
   }));
 
   const resolutionSelector = (

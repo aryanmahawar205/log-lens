@@ -63,19 +63,19 @@ export function UrlAnalytics() {
     <PageContainer title="URL Analytics" description="Discover your most popular, entry, and exit pages." actions={actions}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title="Top URLs">
-          <DataTable data={urlsData?.top_urls || []} columns={defaultColumns} keyExtractor={(r) => r.url} />
+          <DataTable data={urlsData?.top_urls || []} columns={defaultColumns} keyExtractor={(r) => r?.url || 'unknown'} />
         </ChartCard>
 
         <ChartCard title="Landing Pages">
-          <DataTable data={landingData?.landing_pages || []} columns={defaultColumns} keyExtractor={(r) => r.url} />
+          <DataTable data={landingData?.landing_pages || []} columns={defaultColumns} keyExtractor={(r) => r?.url || 'unknown'} />
         </ChartCard>
 
         <ChartCard title="Entry Pages">
-          <DataTable data={urlsData?.entry_pages || []} columns={defaultColumns} keyExtractor={(r) => r.url} />
+          <DataTable data={urlsData?.entry_pages || []} columns={defaultColumns} keyExtractor={(r) => r?.url || 'unknown'} />
         </ChartCard>
 
         <ChartCard title="Exit Pages">
-          <DataTable data={urlsData?.exit_pages || []} columns={defaultColumns} keyExtractor={(r) => r.url} />
+          <DataTable data={urlsData?.exit_pages || []} columns={defaultColumns} keyExtractor={(r) => r?.url || 'unknown'} />
         </ChartCard>
       </div>
     </PageContainer>

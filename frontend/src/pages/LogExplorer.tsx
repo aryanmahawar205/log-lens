@@ -131,17 +131,17 @@ export function LogExplorer() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
-              {!logsData?.logs?.length && !loading ? (
+              {!(logsData?.logs?.length) && !loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
                     No log entries found matching the current filters.
                   </td>
                 </tr>
               ) : (
-                logsData?.logs.map((row: any, idx: number) => (
+                (logsData?.logs || []).map((row: any, idx: number) => (
                   <tr key={idx} className="hover:bg-gray-800/30 transition-colors font-mono text-[13px]">
-                    <td className="px-4 py-2.5 text-gray-400">{new Date(row.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-gray-300">{row.ip}</td>
+                    <td className="px-4 py-2.5 text-gray-400">{row.timestamp ? new Date(row.timestamp).toLocaleString() : 'N/A'}</td>
+                    <td className="px-4 py-2.5 text-gray-300">{row?.ip || 'N/A'}</td>
                     <td className="px-4 py-2.5">
                       <span className={`px-2 py-0.5 rounded font-sans text-xs font-medium ${
                         row.method === 'GET' ? 'bg-blue-500/10 text-blue-400' :
