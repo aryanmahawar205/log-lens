@@ -30,6 +30,9 @@ class QueryBuilder:
         if "upload_id" in filters and filters["upload_id"] is not None:
             clauses.append("upload_id = ?")
             parameters.append(filters["upload_id"])
+        elif "dataset_id" in filters and filters["dataset_id"] is not None:
+            clauses.append("upload_id = ?")
+            parameters.append(filters["dataset_id"])
 
         if "start_date" in filters and filters["start_date"]:
             clauses.append("timestamp >= CAST(? AS TIMESTAMP)")

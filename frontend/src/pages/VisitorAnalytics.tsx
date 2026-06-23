@@ -75,11 +75,11 @@ export function VisitorAnalytics() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title="Top IP Addresses">
-          <DataTable data={visitorData?.top_ips || []} columns={ipColumns} keyExtractor={(r) => r.ip} />
+          <DataTable data={visitorData?.top_ips || []} columns={ipColumns} keyExtractor={(r) => r?.ip || 'unknown'} />
         </ChartCard>
 
         <ChartCard title="Top User Agents">
-          <DataTable data={visitorData?.top_user_agents || []} columns={uaColumns} keyExtractor={(r) => r.user_agent} />
+          <DataTable data={visitorData?.top_user_agents || []} columns={uaColumns} keyExtractor={(r) => r?.user_agent || 'unknown'} />
         </ChartCard>
       </div>
     </PageContainer>

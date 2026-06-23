@@ -236,28 +236,8 @@ async def get_logs(
 
     order = "DESC" if sort_desc else "ASC"
 
-    where_clauses = []
-    params = []
-
-    if filters.get("ip"):
-        where_clauses.append("ip = ?")
-        params.append(filters["ip"])
-
-    if filters.get("url"):
-        where_clauses.append("url LIKE ?")
-        params.append(f"%{filters['url']}%")
-
-    if filters.get("user_agent"):
-        where_clauses.append("user_agent LIKE ?")
-        params.append(f"%{filters['user_agent']}%")
-
-    if filters.get("status_code"):
-        where_clauses.append("status_code = ?")
-        params.append(filters["status_code"])
-
-    where_sql = ""
-    if where_clauses:
-        where_sql = "WHERE " + " AND ".join(where_clauses)
+    from app.analytics.query_builder import QueryBuilder
+    where_sql, params = QueryBuilder.build_filters(filters)
 
     query = f"""
         SELECT

@@ -4,10 +4,7 @@ import { useDatasetContext } from '../context/DatasetContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  `${window.location.protocol}//${window.location.hostname.replace('-3000.', '-8000.')}/api/v1/analytics`;
+import { fetchApi } from '../utils/api';
 
 export function SecurityAnalytics() {
   const { filters } = useFilterContext();
@@ -21,34 +18,17 @@ export function SecurityAnalytics() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const queryParams = new URLSearchParams();
-        if (filters.start_date) queryParams.append('start_date', filters.start_date);
-        if (filters.end_date) queryParams.append('end_date', filters.end_date);
-
-        const qString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-
-        const [ovRes, finRes, trRes, ipRes] = await Promise.all([
-          fetch(`${API_BASE}/security/overview${qString}`),
-          fetch(`${API_BASE}/security/findings${qString}`),
-          fetch(`${API_BASE}/security/attack-trends${qString}`),
-          fetch(`${API_BASE}/security/suspicious-ips${qString}`)
+        const [ovData, finData, trData, ipData] = await Promise.all([
+          fetchApi<any>('/security/overview', filters),
+          fetchApi<any[]>('/security/findings', filters),
+          fetchApi<any[]>('/security/attack-trends', filters),
+          fetchApi<any[]>('/security/suspicious-ips', filters)
         ]);
 
-        setOverview(
-          ovRes.ok ? await ovRes.json() : {}
-        );
-
-        setFindings(
-          finRes.ok ? await finRes.json() : []
-        );
-
-        setAttackTrends(
-          trRes.ok ? await trRes.json() : []
-        );
-
-        setSuspiciousIps(
-          ipRes.ok ? await ipRes.json() : []
-        );  
+        setOverview(ovData || {});
+        setFindings(finData || []);
+        setAttackTrends(trData || []);
+        setSuspiciousIps(ipData || []);
       } catch (error) {
         console.error('Failed to fetch security analytics:', error);
       }
@@ -238,7 +218,12 @@ export function SecurityAnalytics() {
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
-                    <h4 className="font-bold text-gray-200 capitalize">{(finding.type ?? 'unknown').replace('_', ' ')}</h4>
+                    <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-gray-200 capitalize">{(finding.rule_title ?? finding.type ?? 'unknown').replace('_', ' ')}</h4>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${finding.sigma_source ? 'border-purple-500/50 text-purple-400 bg-purple-500/10' : 'border-blue-500/50 text-blue-400 bg-blue-500/10'}`}>
+                            {finding.sigma_source ? 'SIGMA' : 'CUSTOM'}
+                        </span>
+                    </div>
                     <span className="text-xs font-mono bg-gray-800 px-2 py-1 rounded text-gray-300">IP: {finding.ip}</span>
                   </div>
                   <div className="mt-2 text-sm text-gray-400">

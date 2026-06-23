@@ -1,0 +1,20 @@
+title: SQL Injection Attempt
+id: 5f2d665a-08b6-4af1-840e-742b879a9418
+status: experimental
+description: Detects potential SQL injection attempts in URL or query string.
+logsource:
+    category: webserver
+detection:
+    selection:
+        url|contains:
+            - 'UNION SELECT'
+            - 'OR 1=1'
+            - 'information_schema'
+        query_string|contains:
+            - 'UNION SELECT'
+            - 'OR 1=1'
+            - 'information_schema'
+    condition: selection
+falsepositives:
+    - Legitimate queries
+level: critical
