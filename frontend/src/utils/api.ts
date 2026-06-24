@@ -2,7 +2,9 @@ import { type FilterState } from '../context/FilterContext';
 
   const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
-  `${window.location.origin.replace('-3000.app.github.dev', '-8000.app.github.dev')}/api/v1/analytics`;
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000/api/v1/analytics'
+    : `${window.location.origin.replace('-3000.app.github.dev', '-8000.app.github.dev')}/api/v1/analytics`);
 
 /**
  * Builds query parameters string from a filters object and any additional parameters.
@@ -41,7 +43,15 @@ export function buildQueryString(filters: FilterState, additionalParams: Record<
  */
 export async function fetchApi<T>(endpoint: string, filters: FilterState = {}, additionalParams: Record<string, string | number | boolean> = {}): Promise<T> {
   const queryString = buildQueryString(filters, additionalParams);
-  const url = `${API_BASE_URL}${endpoint}${queryString}`;
+
+  // Handle system endpoints that are not under analytics prefix
+  let url;
+  if (endpoint.startsWith('/system/')) {
+    const systemBase = API_BASE_URL.replace('/analytics', '');
+    url = `${systemBase}${endpoint}${queryString}`;
+  } else {
+    url = `${API_BASE_URL}${endpoint}${queryString}`;
+  }
 
   console.log('API Request:', url);
   const response = await fetch(url);

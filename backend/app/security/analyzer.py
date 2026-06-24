@@ -68,17 +68,17 @@ class SecurityAnalyzer:
 
     def _detect_sqli(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string, timestamp
+            SELECT ip, url, query_string, protocol, timestamp
             FROM log_entries
             {where_clause}
             AND (
-                url ILIKE '%UNION SELECT%' OR query_string ILIKE '%UNION SELECT%' OR
-                url ILIKE '%UNION%20SELECT%' OR query_string ILIKE '%UNION%20SELECT%' OR
-                url ILIKE '%OR 1=1%' OR query_string ILIKE '%OR 1=1%' OR
-                url ILIKE '%OR%201=1%' OR query_string ILIKE '%OR%201=1%' OR
-                url ILIKE '%information_schema%' OR query_string ILIKE '%information_schema%' OR
-                url ILIKE '%sleep(%' OR query_string ILIKE '%sleep(%' OR
-                url ILIKE '%benchmark(%' OR query_string ILIKE '%benchmark(%'
+                url ILIKE '%UNION SELECT%' OR query_string ILIKE '%UNION SELECT%' OR protocol ILIKE '%UNION SELECT%' OR
+                url ILIKE '%UNION%20SELECT%' OR query_string ILIKE '%UNION%20SELECT%' OR protocol ILIKE '%UNION%20SELECT%' OR
+                url ILIKE '%OR 1=1%' OR query_string ILIKE '%OR 1=1%' OR protocol ILIKE '%OR 1=1%' OR
+                url ILIKE '%OR%201=1%' OR query_string ILIKE '%OR%201=1%' OR protocol ILIKE '%OR%201=1%' OR
+                url ILIKE '%information_schema%' OR query_string ILIKE '%information_schema%' OR protocol ILIKE '%information_schema%' OR
+                url ILIKE '%sleep(%' OR query_string ILIKE '%sleep(%' OR protocol ILIKE '%sleep(%' OR
+                url ILIKE '%benchmark(%' OR query_string ILIKE '%benchmark(%' OR protocol ILIKE '%benchmark(%'
             )
         """
         results = self.storage.execute_query(query, params)
@@ -100,15 +100,15 @@ class SecurityAnalyzer:
 
     def _detect_xss(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string, timestamp
+            SELECT ip, url, query_string, protocol, timestamp
             FROM log_entries
             {where_clause}
             AND (
-                url ILIKE '%<script>%' OR query_string ILIKE '%<script>%' OR
-                url ILIKE '%javascript:%' OR query_string ILIKE '%javascript:%' OR
-                url ILIKE '%onerror=%' OR query_string ILIKE '%onerror=%' OR
-                url ILIKE '%alert(%' OR query_string ILIKE '%alert(%' OR
-                url ILIKE '%%3Cscript%3E%' OR query_string ILIKE '%%3Cscript%3E%'
+                url ILIKE '%<script>%' OR query_string ILIKE '%<script>%' OR protocol ILIKE '%<script>%' OR
+                url ILIKE '%javascript:%' OR query_string ILIKE '%javascript:%' OR protocol ILIKE '%javascript:%' OR
+                url ILIKE '%onerror=%' OR query_string ILIKE '%onerror=%' OR protocol ILIKE '%onerror=%' OR
+                url ILIKE '%alert(%' OR query_string ILIKE '%alert(%' OR protocol ILIKE '%alert(%' OR
+                url ILIKE '%%3Cscript%3E%' OR query_string ILIKE '%%3Cscript%3E%' OR protocol ILIKE '%%3Cscript%3E%'
             )
         """
         results = self.storage.execute_query(query, params)
@@ -163,17 +163,17 @@ class SecurityAnalyzer:
 
     def _detect_command_injection(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string, timestamp
+            SELECT ip, url, query_string, protocol, timestamp
             FROM log_entries
             {where_clause}
             AND (
-                url ILIKE '%wget %' OR query_string ILIKE '%wget %' OR
-                url ILIKE '%curl %' OR query_string ILIKE '%curl %' OR
-                url ILIKE '%cat %' OR query_string ILIKE '%cat %' OR
-                url ILIKE '%ls %' OR query_string ILIKE '%ls %' OR
-                url ILIKE '%;%' OR query_string ILIKE '%;%' OR
-                url ILIKE '%|%' OR query_string ILIKE '%|%' OR
-                url ILIKE '%&&%' OR query_string ILIKE '%&&%'
+                url ILIKE '%wget %' OR query_string ILIKE '%wget %' OR protocol ILIKE '%wget %' OR
+                url ILIKE '%curl %' OR query_string ILIKE '%curl %' OR protocol ILIKE '%curl %' OR
+                url ILIKE '%cat %' OR query_string ILIKE '%cat %' OR protocol ILIKE '%cat %' OR
+                url ILIKE '%ls %' OR query_string ILIKE '%ls %' OR protocol ILIKE '%ls %' OR
+                url ILIKE '%;%' OR query_string ILIKE '%;%' OR protocol ILIKE '%;%' OR
+                url ILIKE '%|%' OR query_string ILIKE '%|%' OR protocol ILIKE '%|%' OR
+                url ILIKE '%&&%' OR query_string ILIKE '%&&%' OR protocol ILIKE '%&&%'
             )
         """
         results = self.storage.execute_query(query, params)
@@ -195,14 +195,14 @@ class SecurityAnalyzer:
 
     def _detect_path_traversal(self, where_clause: str, params: tuple, upload_id: int) -> List[Dict[str, Any]]:
         query = f"""
-            SELECT ip, url, query_string, timestamp
+            SELECT ip, url, query_string, protocol, timestamp
             FROM log_entries
             {where_clause}
             AND (
-                url ILIKE '%../%' OR query_string ILIKE '%../%' OR
-                url ILIKE '%%2e%2e%2f%' OR query_string ILIKE '%%2e%2e%2f%' OR
-                url ILIKE '%%2e%2e/%' OR query_string ILIKE '%%2e%2e/%' OR
-                url ILIKE '%..%2f%' OR query_string ILIKE '%%..%2f%'
+                url ILIKE '%../%' OR query_string ILIKE '%../%' OR protocol ILIKE '%../%' OR
+                url ILIKE '%%2e%2e%2f%' OR query_string ILIKE '%%2e%2e%2f%' OR protocol ILIKE '%%2e%2e%2f%' OR
+                url ILIKE '%%2e%2e/%' OR query_string ILIKE '%%2e%2e/%' OR protocol ILIKE '%%2e%2e/%' OR
+                url ILIKE '%..%2f%' OR query_string ILIKE '%%..%2f%' OR protocol ILIKE '%%..%2f%'
             )
         """
         results = self.storage.execute_query(query, params)
