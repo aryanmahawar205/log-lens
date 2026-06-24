@@ -1,6 +1,7 @@
 import os
 import subprocess
-from typing import Dict, Any, Optional
+import shutil
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 class IntegrationManager:
@@ -27,6 +28,19 @@ class IntegrationManager:
         }
         self.reload_timestamps = {}
 
+    def is_tool_available(self, tool_key: str) -> bool:
+        """Check if a tool is installed and available."""
+        info = self.integrations.get(tool_key)
+        if not info:
+            return False
+
+        binary = info.get("binary")
+        if binary:
+            return shutil.which(binary) is not None
+
+        # Non-binary tools (like sigma) are checked differently if needed
+        return True
+
     def get_tool_status(self) -> Dict[str, Any]:
         """
         Get the status and version of all registered integrations.
@@ -34,26 +48,37 @@ class IntegrationManager:
         status = {}
         for key, info in self.integrations.items():
             tool_status = {
-                "enabled": True, # For now, all are considered enabled if they can be found
+                "enabled": True,
                 "name": info["name"],
                 "type": info["type"],
-                "last_reload": self.reload_timestamps.get(key)
+                "last_reload": self.reload_timestamps.get(key),
+                "healthy": True
             }
 
             if key == "goaccess":
                 try:
-                    version_out = subprocess.check_output(["goaccess", "--version"]).decode().split("\n")[0]
-                    tool_status["version"] = version_out.replace("GoAccess - ", "")
-                    tool_status["healthy"] = True
+                    if shutil.which("goaccess"):
+                        version_out = subprocess.check_output(["goaccess", "--version"]).decode().split("\n")[0]
+                        tool_status["version"] = version_out.replace("GoAccess - ", "")
+                        tool_status["healthy"] = True
+                    else:
+                        tool_status["version"] = "Not Installed"
+                        tool_status["healthy"] = False
+                        tool_status["enabled"] = False
                 except Exception:
-                    tool_status["version"] = "Not Installed"
+                    tool_status["version"] = "Error"
                     tool_status["healthy"] = False
                     tool_status["enabled"] = False
 
             elif key == "duckdb":
-                import duckdb
-                tool_status["version"] = duckdb.__version__
-                tool_status["healthy"] = True
+                try:
+                    import duckdb
+                    tool_status["version"] = duckdb.__version__
+                    tool_status["healthy"] = True
+                except ImportError:
+                    tool_status["version"] = "Not Installed"
+                    tool_status["healthy"] = False
+                    tool_status["enabled"] = False
 
             elif key == "sigma":
                 # Assuming sigma rules are in a specific directory
@@ -61,6 +86,8 @@ class IntegrationManager:
                 if os.path.exists(rules_dir):
                     rule_count = len([f for f in os.listdir(rules_dir) if f.endswith(".yml") or f.endswith(".yaml")])
                     tool_status["rule_count"] = rule_count
+                else:
+                    tool_status["rule_count"] = 0
                 tool_status["version"] = info.get("version")
                 tool_status["healthy"] = True
 
@@ -70,6 +97,14 @@ class IntegrationManager:
 
     def record_reload(self, tool_key: str):
         self.reload_timestamps[tool_key] = datetime.now().isoformat()
+
+    def register_integration(self, key: str, name: str, tool_type: str, binary: Optional[str] = None):
+        """Register a new integration at runtime."""
+        self.integrations[key] = {
+            "name": name,
+            "type": tool_type,
+            "binary": binary
+        }
 
 # Global instance
 integration_manager = IntegrationManager()
