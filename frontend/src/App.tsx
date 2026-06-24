@@ -7,6 +7,7 @@ import { UrlAnalytics } from './pages/UrlAnalytics';
 import { VisitorAnalytics } from './pages/VisitorAnalytics';
 import { LogExplorer } from './pages/LogExplorer';
 import { SecurityAnalytics } from './pages/SecurityAnalytics';
+import { SystemDiagnostics } from './pages/SystemDiagnostics';
 import { FilterProvider } from './context/FilterContext';
 import { DatasetProvider } from './context/DatasetContext';
 
@@ -25,6 +26,7 @@ function App() {
               <Route path="/visitors" element={<VisitorAnalytics />} />
               <Route path="/security" element={<SecurityAnalytics />} />
               <Route path="/explorer" element={<LogExplorer />} />
+              <Route path="/diagnostics" element={<SystemDiagnostics />} />
             </Routes>
           </Layout>
         </Router>

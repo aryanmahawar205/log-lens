@@ -50,14 +50,14 @@ def test_security_analyzer_detections(test_db):
     findings = analyzer.get_findings()
     assert len(findings) >= 7, f"Should detect at least 7 attacks, got {len(findings)}"
 
-    types = [f["type"] for f in findings]
-    assert "directory_enumeration" in types
-    assert "brute_force" in types
-    assert "sql_injection" in types
-    assert "xss" in types
-    assert "scanner" in types
-    assert "command_injection" in types
-    assert "path_traversal" in types
+    types = [f.get("rule_title") for f in findings]
+    assert "Directory Enumeration" in types
+    assert "Brute Force Attempt" in types
+    assert "SQL Injection Attempt" in types
+    assert "Cross-Site Scripting Attempt" in types
+    assert "Security Scanner Detected" in types
+    assert "Command Injection Attempt" in types
+    assert "Path Traversal Attempt" in types
 
     ips = analyzer.get_suspicious_ips()
     assert len(ips) == 6

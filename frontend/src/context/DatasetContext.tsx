@@ -56,7 +56,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
     setDatasets(data);
 
     if (data.length > 0) {
-      let nextId = data[0].id; // default to most recent (assuming API returns sorted by uploaded_at DESC)
+      let nextId = null;
 
       if (!autoSelectLatest) {
         const storedId = localStorage.getItem(DATASET_STORAGE_KEY);
@@ -70,7 +70,11 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
       }
 
       setSelectedDatasetId(nextId);
-      localStorage.setItem(DATASET_STORAGE_KEY, nextId.toString());
+      if (nextId !== null) {
+        localStorage.setItem(DATASET_STORAGE_KEY, nextId.toString());
+      } else {
+        localStorage.removeItem(DATASET_STORAGE_KEY);
+      }
     } else {
       setSelectedDatasetId(null);
       localStorage.removeItem(DATASET_STORAGE_KEY);
@@ -112,9 +116,8 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (datasets.length > 0 && selectedDatasetId !== null && !selectedDataset) {
       // selectedDatasetId exists but is not in datasets (e.g. 404 from backend later)
-      const nextId = datasets[0].id;
-      setSelectedDatasetId(nextId);
-      localStorage.setItem(DATASET_STORAGE_KEY, nextId.toString());
+      setSelectedDatasetId(null);
+      localStorage.removeItem(DATASET_STORAGE_KEY);
     } else if (datasets.length === 0 && selectedDatasetId !== null) {
       setSelectedDatasetId(null);
       localStorage.removeItem(DATASET_STORAGE_KEY);

@@ -24,27 +24,33 @@ export function TopBar() {
             <Database className="w-4 h-4 text-blue-400 mr-2" />
             <select
               className="bg-transparent text-sm text-gray-200 outline-none w-48 truncate"
-              value={selectedDataset?.id || ''}
-              onChange={(e) => selectDataset(Number(e.target.value))}
+              value={filters.upload_id || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val) {
+                  setFilter('upload_id', Number(val));
+                  selectDataset(Number(val));
+                } else {
+                  setFilter('upload_id', undefined);
+                }
+              }}
             >
+              <option value="">All Uploads (Global)</option>
               {datasets.map((ds) => (
                 <option key={ds.id} value={ds.id}>
-                  {ds.filename} ({new Date(ds.uploaded_at).toLocaleDateString()}) - {ds.total_entries} entries
+                  {ds.filename} ({new Date(ds.uploaded_at).toLocaleDateString()})
                 </option>
               ))}
             </select>
-            <button
-              onClick={handleDelete}
-              className="ml-2 text-gray-400 hover:text-red-400 transition-colors"
-              title="Delete Dataset"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-        {selectedDataset && (
-          <div className="ml-4 px-2 py-1 bg-blue-900/30 text-blue-400 text-xs rounded-full border border-blue-800/50">
-            Active: {selectedDataset.filename}
+            {filters.upload_id && (
+              <button
+                onClick={handleDelete}
+                className="ml-2 text-gray-400 hover:text-red-400 transition-colors"
+                title="Delete Dataset"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
       </div>

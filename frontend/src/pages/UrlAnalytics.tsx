@@ -9,8 +9,6 @@ import { fetchApi } from '../utils/api';
 
 export function UrlAnalytics() {
   const { filters } = useFilterContext();
-  const { selectedDataset } = useDatasetContext();
-  if (!selectedDataset) return null;
   const [urlsData, setUrlsData] = useState<any>(null);
   const [landingData, setLandingData] = useState<any>(null);
 

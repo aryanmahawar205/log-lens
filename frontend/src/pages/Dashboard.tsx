@@ -37,9 +37,6 @@ export function Dashboard() {
   const [error, setError] = useState<Error | null>(null);
 
   const loadData = async () => {
-    // Only load if a dataset is selected
-    if (!selectedDataset) return;
-
     setLoading(true);
     setError(null);
     try {
@@ -58,9 +55,9 @@ export function Dashboard() {
 
   useEffect(() => {
     loadData();
-  }, [filters, selectedDataset]);
+  }, [filters]);
 
-  if (!selectedDataset) return null; // Layout handles empty state
+  // Layout handles empty state (0 datasets), so it's safe to render global
 
   if (loading && !summary) return <PageContainer title="Dashboard"><LoadingState message="Loading dashboard overview..." /></PageContainer>;
   if (error) return <PageContainer title="Dashboard"><ErrorState error={error} retry={loadData} /></PageContainer>;
@@ -83,54 +80,85 @@ export function Dashboard() {
     <PageContainer title="Dashboard" description="High-level overview of your web traffic and analytics.">
 
       {/* Dataset Details Panel */}
-      <div className="mb-6 bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between">
-        <div className="flex items-center mb-4 md:mb-0">
-          <div className="p-3 bg-blue-500/10 rounded-lg mr-4 border border-blue-500/20">
-            <FileText className="w-6 h-6 text-blue-400" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">{selectedDataset.filename}</h3>
-            <p className="text-sm text-gray-400 flex items-center mt-1">
-              <Database className="w-3.5 h-3.5 mr-1" />
-              Uploaded on {new Date(selectedDataset.uploaded_at).toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Format</p>
-            <p className="font-medium text-gray-200">{selectedDataset.format}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Parser</p>
-            <p className="font-medium text-gray-200">{selectedDataset.parser_used}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Confidence</p>
-            <p className="font-medium text-emerald-400 flex items-center">
-              {Math.round(selectedDataset.confidence * 100)}%
-              <CheckCircle className="w-3.5 h-3.5 ml-1" />
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Entries</p>
-            <p className="font-medium text-blue-400">{selectedDataset.total_entries.toLocaleString()}</p>
-          </div>
-          {provider && (
+      {selectedDataset ? (
+        <div className="mb-6 bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between">
+          <div className="flex items-center mb-4 md:mb-0">
+            <div className="p-3 bg-blue-500/10 rounded-lg mr-4 border border-blue-500/20">
+              <FileText className="w-6 h-6 text-blue-400" />
+            </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Provider</p>
-              <p className={`font-medium flex items-center ${provider.active_provider === 'goaccess' ? 'text-orange-400' : 'text-blue-400'}`}>
-                <Cpu className="w-3.5 h-3.5 mr-1" />
-                {provider.active_provider === 'goaccess' ? 'GoAccess' : 'Native'}
-                {provider.active_provider === 'goaccess' && provider.last_execution_status === 'failed' && (
-                   <span className="ml-1 text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/30">FALLBACK</span>
-                )}
+              <h3 className="text-lg font-semibold text-white">{selectedDataset.filename}</h3>
+              <p className="text-sm text-gray-400 flex items-center mt-1">
+                <Database className="w-3.5 h-3.5 mr-1" />
+                Uploaded on {new Date(selectedDataset.uploaded_at).toLocaleString()}
               </p>
             </div>
-          )}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-8">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Format</p>
+              <p className="font-medium text-gray-200">{selectedDataset.format}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Parser</p>
+              <p className="font-medium text-gray-200">{selectedDataset.parser_used}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Confidence</p>
+              <p className="font-medium text-emerald-400 flex items-center">
+                {Math.round(selectedDataset.confidence * 100)}%
+                <CheckCircle className="w-3.5 h-3.5 ml-1" />
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Entries</p>
+              <p className="font-medium text-blue-400">{selectedDataset.total_entries.toLocaleString()}</p>
+            </div>
+            {provider && (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Provider</p>
+                <p className={`font-medium flex items-center ${provider.active_provider === 'goaccess' ? 'text-orange-400' : 'text-blue-400'}`}>
+                  <Cpu className="w-3.5 h-3.5 mr-1" />
+                  {provider.active_provider === 'goaccess' ? 'GoAccess' : 'Native'}
+                  {provider.active_provider === 'goaccess' && provider.last_execution_status === 'failed' && (
+                    <span className="ml-1 text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/30">FALLBACK</span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-6 bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between">
+          <div className="flex items-center mb-4 md:mb-0">
+            <div className="p-3 bg-blue-500/10 rounded-lg mr-4 border border-blue-500/20">
+              <Globe className="w-6 h-6 text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Global Analytics</h3>
+              <p className="text-sm text-gray-400 flex items-center mt-1">
+                Aggregated metrics across all datasets
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+            {provider && (
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Provider</p>
+                <p className={`font-medium flex items-center ${provider.active_provider === 'goaccess' ? 'text-orange-400' : 'text-blue-400'}`}>
+                  <Cpu className="w-3.5 h-3.5 mr-1" />
+                  {provider.active_provider === 'goaccess' ? 'GoAccess' : 'Native'}
+                  {provider.active_provider === 'goaccess' && provider.last_execution_status === 'failed' && (
+                    <span className="ml-1 text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/30">FALLBACK</span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard

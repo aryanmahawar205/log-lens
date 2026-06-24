@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Zap, Link as LinkIcon, Users, Search, Settings, Shield, UploadCloud } from 'lucide-react';
+import { LayoutDashboard, Activity, Zap, Link as LinkIcon, Users, Search, Settings, Shield, UploadCloud, Terminal } from 'lucide-react';
 import { TopBar } from '../TopBar';
 import { useDatasetContext } from '../../context/DatasetContext';
 import { FileUpload } from '../FileUpload';
@@ -21,6 +21,7 @@ export function Layout({ children }: LayoutProps) {
     { name: 'Visitors', path: '/visitors', icon: Users },
     { name: 'Security', path: '/security', icon: Shield },
     { name: 'Log Explorer', path: '/explorer', icon: Search },
+    { name: 'Diagnostics', path: '/diagnostics', icon: Terminal },
   ];
 
   return (
