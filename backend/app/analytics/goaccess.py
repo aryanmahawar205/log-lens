@@ -2,6 +2,7 @@ import subprocess
 import json
 import os
 import tempfile
+import shutil
 from typing import Dict, Any, Optional, List
 from app.analytics.base import AnalyticsProvider
 from app.storage.base import BaseStorage
@@ -13,11 +14,12 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
     Analytics provider using GoAccess for log processing.
     """
 
-    def __init__(self, storage: Optional[BaseStorage] = None):
+    def __init__(self, storage: Optional[BaseStorage] = None, fallback_provider: Optional[AnalyticsProvider] = None):
         if storage is None:
             self.storage = DuckDBStorage()
         else:
             self.storage = storage
+        self.fallback_provider = fallback_provider
         self.log_dir = "data/raw_logs"
         os.makedirs(self.log_dir, exist_ok=True)
 
@@ -29,21 +31,34 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def _get_log_format(self, upload_id: int) -> str:
         """
-        Determine log format for GoAccess.
-        Ideally this should be based on the format detected during upload.
+        Determine log format for GoAccess based on detected parser.
+        GoAccess standard formats: COMBINED, COMMON, VCOMBINED, W3C, SQUID, CLOUD FRONT, GCS, AWSELB, AWSS3, AWSALB.
         """
         # Fetch format from storage
         result = self.storage.execute_query("SELECT format FROM uploads WHERE id = ?", (upload_id,))
-        if result:
-            fmt = result[0]["format"].lower()
-            if "apache" in fmt or "nginx" in fmt:
-                return "COMBINED"
-        return "COMBINED"
+        if not result:
+            return "COMBINED"
 
-    def _run_goaccess(self, upload_id: int) -> Dict[str, Any]:
+        fmt = result[0]["format"].lower()
+
+        # Mapping LogLens formats to GoAccess formats
+        mapping = {
+            "apache_access": "COMBINED",
+            "nginx_access": "COMBINED",
+            "clf": "COMMON",
+            "iis_w3c": "W3C",
+        }
+
+        return mapping.get(fmt, "COMBINED")
+
+    def _run_goaccess(self, upload_id: int) -> Optional[Dict[str, Any]]:
         log_path = self._get_log_path(upload_id)
         if not log_path:
-            return {}
+            return None
+
+        # Check if goaccess is installed
+        if not shutil.which("goaccess"):
+            return None
 
         log_format = self._get_log_format(upload_id)
 
@@ -58,12 +73,12 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
                 f"--output={tmp_name}",
                 "--no-global-config"
             ]
-            subprocess.run(cmd, check=True, capture_output=True)
+            process = subprocess.run(cmd, check=True, capture_output=True, text=True)
             with open(tmp_name, 'r') as f:
                 return json.load(f)
         except Exception as e:
             print(f"Error running GoAccess: {e}")
-            return {}
+            return None
         finally:
             if os.path.exists(tmp_name):
                 os.unlink(tmp_name)
@@ -77,6 +92,15 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
             }
 
         data = self._run_goaccess(upload_id)
+        if not data and self.fallback_provider:
+            return self.fallback_provider.get_traffic_summary(filters)
+
+        if not data:
+            return {
+                "total_requests": 0, "hits": 0, "unique_visitors": 0, "total_bytes": 0,
+                "total_sessions": 0, "returning_visitors": 0, "avg_pages_per_session": 0.0, "avg_session_duration_sec": 0.0
+            }
+
         general = data.get("general", {})
 
         return {
@@ -85,7 +109,7 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
             "unique_visitors": general.get("unique_visitors", 0),
             "total_bytes": general.get("bandwidth", 0),
             "total_sessions": general.get("unique_visitors", 0),
-            "returning_visitors": 0,
+            "returning_visitors": 0, # GoAccess doesn't easily provide this in summary
             "avg_pages_per_session": 0.0,
             "avg_session_duration_sec": 0.0,
         }
@@ -95,6 +119,10 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         if not upload_id: return []
 
         data = self._run_goaccess(upload_id)
+        if not data and self.fallback_provider:
+            return self.fallback_provider.get_time_analytics(resolution, filters)
+
+        if not data: return []
 
         results = []
         if resolution == 'day':
@@ -116,6 +144,9 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         return results
 
     def get_performance_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if self.fallback_provider:
+            return self.fallback_provider.get_performance_analytics(filters)
+
         return {
             "avg_response_time": 0.0, "median_response_time": 0.0,
             "p90_response_time": 0.0, "p95_response_time": 0.0, "p99_response_time": 0.0,
@@ -127,12 +158,19 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         if not upload_id: return []
 
         data = self._run_goaccess(upload_id)
+        if not data and self.fallback_provider:
+            return self.fallback_provider.get_top_urls(limit, normalized, filters)
+
+        if not data: return []
+
         requests = data.get("requests", {}).get("data", [])
 
         return [{"url": r["data"], "count": r["hits"]["count"]} for r in requests[:limit]]
 
     def get_entry_exit_pages(self, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
-        # Not easily available in GoAccess standard JSON without specific modules
+        if self.fallback_provider:
+            return self.fallback_provider.get_entry_exit_pages(limit, filters)
+
         return {"entry_pages": [], "exit_pages": []}
 
     def get_visitor_analytics(self, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
@@ -140,11 +178,16 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         if not upload_id: return {"top_ips": [], "top_user_agents": []}
 
         data = self._run_goaccess(upload_id)
+        if not data and self.fallback_provider:
+            return self.fallback_provider.get_visitor_analytics(limit, filters)
+
+        if not data: return {"top_ips": [], "top_user_agents": []}
+
         hosts = data.get("hosts", {}).get("data", [])
 
         return {
             "top_ips": [{"ip": h["data"], "count": h["hits"]["count"]} for h in hosts[:limit]],
-            "top_user_agents": []
+            "top_user_agents": [] # GoAccess doesn't provide top UAs in this format easily
         }
 
     def get_status_code_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -152,6 +195,11 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         if not upload_id: return {"distribution": [], "success_rate": 0, "client_error_rate": 0, "server_error_rate": 0}
 
         data = self._run_goaccess(upload_id)
+        if not data and self.fallback_provider:
+            return self.fallback_provider.get_status_code_analytics(filters)
+
+        if not data: return {"distribution": [], "success_rate": 0, "client_error_rate": 0, "server_error_rate": 0}
+
         codes = data.get("status_codes", {}).get("data", [])
 
         dist = [{"status_code": int(c["data"]), "count": c["hits"]["count"]} for c in codes]
@@ -171,15 +219,27 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         }
 
     def get_traffic_trends(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if self.fallback_provider:
+            return self.fallback_provider.get_traffic_trends(filters)
+
         return {"peak_hours": [], "peak_days": [], "moving_averages": [], "traffic_growth": {}}
 
     def get_bounce_and_landing_pages(self, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
+        if self.fallback_provider:
+            return self.fallback_provider.get_bounce_and_landing_pages(limit, filters)
+
         return {"landing_pages": [], "bounce_candidates": []}
 
     def get_extended_performance_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if self.fallback_provider:
+            return self.fallback_provider.get_extended_performance_analytics(filters)
+
         return {"fastest_endpoints": [], "throughput_analysis": []}
 
     def get_status_code_groups(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if self.fallback_provider:
+            return self.fallback_provider.get_status_code_groups(filters)
+
         return {"by_endpoint": [], "by_hour": [], "by_day": []}
 
     def get_extended_visitor_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -187,6 +247,11 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         if not upload_id: return {"browser_distribution": [], "os_distribution": []}
 
         data = self._run_goaccess(upload_id)
+        if not data and self.fallback_provider:
+            return self.fallback_provider.get_extended_visitor_analytics(filters)
+
+        if not data: return {"browser_distribution": [], "os_distribution": []}
+
         browsers = data.get("browsers", {}).get("data", [])
         os_data = data.get("os", {}).get("data", [])
 

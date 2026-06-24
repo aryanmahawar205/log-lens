@@ -17,12 +17,17 @@ from app.storage.duckdb_storage import DuckDBStorage
 os.makedirs("data", exist_ok=True)
 storage = DuckDBStorage("data/analytics.duckdb")
 
-# Analytics Provider Selection
+# Analytics Provider Selection with Fallback
+native_provider = NativeAnalyticsProvider(storage=storage)
 provider_type = config.get("analytics.provider", "native")
+
 if provider_type == "goaccess":
-    analytics_engine = GoAccessAnalyticsProvider(storage=storage)
+    analytics_engine = GoAccessAnalyticsProvider(
+        storage=storage,
+        fallback_provider=native_provider
+    )
 else:
-    analytics_engine = NativeAnalyticsProvider(storage=storage)
+    analytics_engine = native_provider
 
 from datetime import datetime
 
