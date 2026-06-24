@@ -3,10 +3,11 @@ from app.models.schema import NormalizedLogEntry
 from app.storage.base import BaseStorage
 from app.storage.duckdb_storage import DuckDBStorage
 from app.analytics.query_builder import QueryBuilder
+from app.analytics.base import AnalyticsProvider
 
-class AnalyticsEngine:
+class NativeAnalyticsProvider(AnalyticsProvider):
     """
-    Core analytics engine using DuckDB for high-performance log processing.
+    Native analytics provider using DuckDB for high-performance log processing.
     """
 
     def __init__(self, storage: Optional[BaseStorage] = None):
@@ -233,6 +234,39 @@ class AnalyticsEngine:
             "exit_pages": exit_pages
         }
 
+    def get_visitor_analytics(self, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Return visitor analytics.
+        """
+        if filters is None:
+            filters = {}
+        where_clause, params = QueryBuilder.build_filters(filters)
+
+        ip_query = f"""
+            SELECT ip, COUNT(*) as count
+            FROM log_entries
+            {where_clause}
+            GROUP BY ip
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        top_ips = self.storage.execute_query(ip_query, tuple(params) + (limit,))
+
+        ua_query = f"""
+            SELECT user_agent, COUNT(*) as count
+            FROM log_entries
+            {where_clause}
+            GROUP BY user_agent
+            ORDER BY count DESC
+            LIMIT ?
+        """
+        top_uas = self.storage.execute_query(ua_query, tuple(params) + (limit,))
+
+        return {
+            "top_ips": top_ips,
+            "top_user_agents": top_uas
+        }
+
     def get_status_code_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Return status code analytics.
@@ -268,39 +302,6 @@ class AnalyticsEngine:
             "success_rate": rates.get("success_rate") or 0.0,
             "client_error_rate": rates.get("client_error_rate") or 0.0,
             "server_error_rate": rates.get("server_error_rate") or 0.0
-        }
-
-    def get_visitor_analytics(self, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        Return visitor analytics.
-        """
-        if filters is None:
-            filters = {}
-        where_clause, params = QueryBuilder.build_filters(filters)
-
-        ip_query = f"""
-            SELECT ip, COUNT(*) as count
-            FROM log_entries
-            {where_clause}
-            GROUP BY ip
-            ORDER BY count DESC
-            LIMIT ?
-        """
-        top_ips = self.storage.execute_query(ip_query, tuple(params) + (limit,))
-
-        ua_query = f"""
-            SELECT user_agent, COUNT(*) as count
-            FROM log_entries
-            {where_clause}
-            GROUP BY user_agent
-            ORDER BY count DESC
-            LIMIT ?
-        """
-        top_uas = self.storage.execute_query(ua_query, tuple(params) + (limit,))
-
-        return {
-            "top_ips": top_ips,
-            "top_user_agents": top_uas
         }
 
     def get_traffic_trends(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -557,3 +558,9 @@ class AnalyticsEngine:
             "browser_distribution": browsers,
             "os_distribution": operating_systems
         }
+
+class AnalyticsEngine(NativeAnalyticsProvider):
+    """
+    Backwards compatible alias for NativeAnalyticsProvider.
+    """
+    pass

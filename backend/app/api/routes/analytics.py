@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends
 from typing import Optional, Dict, Any, List
-from app.analytics.engine import AnalyticsEngine
+from app.analytics.engine import NativeAnalyticsProvider
+from app.analytics.goaccess import GoAccessAnalyticsProvider
 from app.parsers.detector import FormatDetector
 from app.parsers.registry import ParserRegistry
+from app.config import config
 
 import tempfile
 import os
@@ -14,7 +16,13 @@ from app.storage.duckdb_storage import DuckDBStorage
 
 os.makedirs("data", exist_ok=True)
 storage = DuckDBStorage("data/analytics.duckdb")
-analytics_engine = AnalyticsEngine(storage=storage)
+
+# Analytics Provider Selection
+provider_type = config.get("analytics.provider", "native")
+if provider_type == "goaccess":
+    analytics_engine = GoAccessAnalyticsProvider(storage=storage)
+else:
+    analytics_engine = NativeAnalyticsProvider(storage=storage)
 
 from datetime import datetime
 
@@ -99,21 +107,31 @@ async def upload_log_file(file: UploadFile = File(...)):
         # Generate new upload ID (Unix timestamp or sequence)
         upload_id = int(datetime.now().timestamp() * 1000)
 
+        # For GoAccess or other external tools, we may want to preserve the raw log file
+        raw_log_dir = "data/raw_logs"
+        os.makedirs(raw_log_dir, exist_ok=True)
+
+        raw_log_path = os.path.join(raw_log_dir, f"{upload_id}.log")
+        import shutil
+        shutil.copy(tmp_path, raw_log_path)
+
         # Parse and ingest in batches to minimize memory footprint
         batch_size = 10000
         current_batch = []
         total_ingested = 0
 
+        # We still ingest into Native provider for secondary analytics and log exploration
+        # even if GoAccess is primary for overview
         for entry in parser.parse_file(tmp_path):
             current_batch.append(entry)
             if len(current_batch) >= batch_size:
-                analytics_engine.ingest_entries(current_batch, upload_id)
+                storage.ingest_batch(current_batch, upload_id)
                 total_ingested += len(current_batch)
                 current_batch.clear()
 
         # Ingest remaining
         if current_batch:
-            analytics_engine.ingest_entries(current_batch, upload_id)
+            storage.ingest_batch(current_batch, upload_id)
             total_ingested += len(current_batch)
 
         # Record upload in uploads table
