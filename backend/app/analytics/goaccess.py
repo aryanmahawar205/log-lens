@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import shutil
+import time
 from typing import Dict, Any, Optional, List
 from app.analytics.base import AnalyticsProvider
 from app.storage.base import BaseStorage
@@ -52,12 +53,14 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         return mapping.get(fmt, "COMBINED")
 
     def _run_goaccess(self, upload_id: int) -> Optional[Dict[str, Any]]:
+        from app.integration_manager import integration_manager
         log_path = self._get_log_path(upload_id)
         if not log_path:
             return None
 
         # Check if goaccess is installed
         if not shutil.which("goaccess"):
+            integration_manager.record_execution("goaccess", "failed", 0, {"error": "Binary not found"})
             return None
 
         log_format = self._get_log_format(upload_id)
@@ -65,19 +68,62 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
             tmp_name = tmp.name
 
+        start_time = time.time()
+        artifact_dir = f"data/artifacts/goaccess/{upload_id}"
+        os.makedirs(artifact_dir, exist_ok=True)
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        json_artifact = os.path.join(artifact_dir, f"report_{timestamp_str}.json")
+        html_artifact = os.path.join(artifact_dir, f"report_{timestamp_str}.html")
+
         try:
             cmd = [
                 "goaccess",
                 log_path,
                 f"--log-format={log_format}",
-                f"--output={tmp_name}",
+                f"--output={json_artifact}",
+                f"--output={html_artifact}",
                 "--no-global-config"
             ]
             process = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            with open(tmp_name, 'r') as f:
-                return json.load(f)
+            duration = time.time() - start_time
+
+            with open(json_artifact, 'r') as f:
+                data = json.load(f)
+
+            version = "unknown"
+            try:
+                version = subprocess.check_output(["goaccess", "--version"]).decode().split("\n")[0].replace("GoAccess - ", "")
+            except: pass
+
+            # Persist to integration manager
+            integration_manager.record_execution("goaccess", "success", duration, {
+                "version": version,
+                "json_artifact": json_artifact,
+                "html_artifact": html_artifact,
+                "log_format": log_format
+            })
+
+            # Persist to storage
+            artifacts_json = json.dumps({
+                "json": json_artifact,
+                "html": html_artifact
+            })
+            self.storage.execute_query("""
+                INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
+                VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'success', ?, ?, ?, ?)
+            """, (upload_id, datetime.now(), duration, version, artifacts_json))
+
+            return data
         except Exception as e:
+            duration = time.time() - start_time
             print(f"Error running GoAccess: {e}")
+            integration_manager.record_execution("goaccess", "failed", duration, {"error": str(e)})
+
+            self.storage.execute_query("""
+                INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
+                VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'failed', ?, ?, ?, ?)
+            """, (upload_id, datetime.now(), duration, "unknown", json.dumps({"error": str(e)})))
             return None
         finally:
             if os.path.exists(tmp_name):

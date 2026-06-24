@@ -59,6 +59,21 @@ class DuckDBStorage(BaseStorage):
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_status_code ON log_entries(status_code)")
         self.conn.execute("CREATE INDEX IF NOT EXISTS idx_bot_classification ON log_entries(bot_classification)")
 
+        # Persistent execution logs for external tools
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS external_tool_executions (
+                id INTEGER PRIMARY KEY,
+                tool_name VARCHAR,
+                upload_id BIGINT,
+                status VARCHAR,
+                execution_timestamp TIMESTAMP,
+                duration_sec DOUBLE,
+                version VARCHAR,
+                artifacts JSON
+            )
+        """)
+        self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_execution_id START 1")
+
         # Create view for sessionization (30 min timeout)
         self.conn.execute("""
             CREATE OR REPLACE VIEW log_sessions AS

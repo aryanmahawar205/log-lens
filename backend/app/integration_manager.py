@@ -27,6 +27,16 @@ class IntegrationManager:
             }
         }
         self.reload_timestamps = {}
+        self.execution_metadata = {}
+
+    def record_execution(self, tool_key: str, status: str, duration: float, metadata: Optional[Dict[str, Any]] = None):
+        """Record execution metrics for a tool."""
+        self.execution_metadata[tool_key] = {
+            "last_status": status,
+            "last_execution": datetime.now().isoformat(),
+            "duration": duration,
+            "metadata": metadata or {}
+        }
 
     def is_tool_available(self, tool_key: str) -> bool:
         """Check if a tool is installed and available."""
@@ -90,6 +100,10 @@ class IntegrationManager:
                     tool_status["rule_count"] = 0
                 tool_status["version"] = info.get("version")
                 tool_status["healthy"] = True
+
+            # Add execution metadata if available
+            if key in self.execution_metadata:
+                tool_status["execution"] = self.execution_metadata[key]
 
             status[key] = tool_status
 

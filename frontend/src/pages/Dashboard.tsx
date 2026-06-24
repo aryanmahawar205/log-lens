@@ -5,7 +5,17 @@ import { LoadingState, ErrorState } from '../components/ui/States';
 import { useFilterContext } from '../context/FilterContext';
 import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
-import { Activity, Users, Globe, HardDrive, Clock, AlertTriangle, FileText, CheckCircle, Database } from 'lucide-react';
+import { Activity, Users, Globe, HardDrive, Clock, AlertTriangle, FileText, CheckCircle, Database, Cpu, Terminal, ShieldCheck, XCircle } from 'lucide-react';
+
+interface ProviderInfo {
+  active_provider: string;
+  fallback_provider: string;
+  goaccess_available: boolean;
+  last_execution: string | null;
+  last_execution_status: string | null;
+  goaccess_version: string | null;
+  duration: number | null;
+}
 
 interface DashboardSummary {
   total_requests: number;
@@ -22,6 +32,7 @@ export function Dashboard() {
   const { filters } = useFilterContext();
   const { selectedDataset } = useDatasetContext();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [provider, setProvider] = useState<ProviderInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -32,8 +43,12 @@ export function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchApi<DashboardSummary>('/overview', filters);
-      setSummary(data);
+      const [summaryData, providerData] = await Promise.all([
+        fetchApi<DashboardSummary>('/overview', filters),
+        fetchApi<ProviderInfo>('/system/provider')
+      ]);
+      setSummary(summaryData);
+      setProvider(providerData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
@@ -47,7 +62,7 @@ export function Dashboard() {
 
   if (!selectedDataset) return null; // Layout handles empty state
 
-  if (loading) return <PageContainer title="Dashboard"><LoadingState message="Loading dashboard overview..." /></PageContainer>;
+  if (loading && !summary) return <PageContainer title="Dashboard"><LoadingState message="Loading dashboard overview..." /></PageContainer>;
   if (error) return <PageContainer title="Dashboard"><ErrorState error={error} retry={loadData} /></PageContainer>;
   if (!summary) return <PageContainer title="Dashboard"><div className="text-gray-400">No data available</div></PageContainer>;
 
@@ -102,6 +117,18 @@ export function Dashboard() {
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Entries</p>
             <p className="font-medium text-blue-400">{selectedDataset.total_entries.toLocaleString()}</p>
           </div>
+          {provider && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Provider</p>
+              <p className={`font-medium flex items-center ${provider.active_provider === 'goaccess' ? 'text-orange-400' : 'text-blue-400'}`}>
+                <Cpu className="w-3.5 h-3.5 mr-1" />
+                {provider.active_provider === 'goaccess' ? 'GoAccess' : 'Native'}
+                {provider.active_provider === 'goaccess' && provider.last_execution_status === 'failed' && (
+                   <span className="ml-1 text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/30">FALLBACK</span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -144,12 +171,67 @@ export function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl flex items-center justify-center min-h-[300px]">
-           <p className="text-gray-500 text-sm">Detailed traffic charts available in the Traffic tab.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div className="lg:col-span-2 bg-gray-900 border border-gray-800 p-6 rounded-xl flex flex-col items-center justify-center min-h-[300px]">
+           <p className="text-gray-500 text-sm">Detailed traffic and visitor charts available in the specialized tabs.</p>
+           <div className="flex gap-4 mt-4">
+              <div className="h-2 w-24 bg-gray-800 rounded-full animate-pulse"></div>
+              <div className="h-2 w-32 bg-gray-800 rounded-full animate-pulse"></div>
+           </div>
         </div>
-        <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl flex items-center justify-center min-h-[300px]">
-           <p className="text-gray-500 text-sm">Detailed visitor charts available in the Visitors tab.</p>
+
+        {/* Diagnostics Panel */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-semibold text-gray-200 flex items-center">
+              <Terminal className="w-4 h-4 mr-2 text-blue-400" />
+              Diagnostics
+            </h3>
+            {provider?.active_provider === 'goaccess' ? (
+              <span className="text-[10px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-full border border-orange-500/20 uppercase font-bold tracking-tighter">External</span>
+            ) : (
+              <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/20 uppercase font-bold tracking-tighter">Internal</span>
+            )}
+          </div>
+
+          <div className="space-y-4 flex-1">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500">Analytics Provider</span>
+              <span className="text-gray-200 font-medium">{provider?.active_provider === 'goaccess' ? 'GoAccess' : 'Native'}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500">Version</span>
+              <span className="text-gray-200 font-medium">{provider?.active_provider === 'goaccess' ? (provider?.goaccess_version || 'Unknown') : 'v1.0.0 (Native)'}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500">Status</span>
+              <div className="flex items-center font-medium">
+                {provider?.last_execution_status === 'success' ? (
+                  <><ShieldCheck className="w-3.5 h-3.5 mr-1 text-emerald-400" /><span className="text-emerald-400">Success</span></>
+                ) : provider?.last_execution_status === 'failed' ? (
+                  <><XCircle className="w-3.5 h-3.5 mr-1 text-rose-400" /><span className="text-rose-400">Fallback Active</span></>
+                ) : (
+                  <span className="text-gray-400">No data</span>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500">Processing Time</span>
+              <span className="text-gray-200 font-medium">{provider?.duration ? `${(provider.duration * 1000).toFixed(0)}ms` : 'N/A'}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-500">Last Ran</span>
+              <span className="text-gray-400 text-xs truncate max-w-[120px]">
+                {provider?.last_execution ? new Date(provider.last_execution).toLocaleTimeString() : 'Never'}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-800">
+             <p className="text-[10px] text-gray-600 italic">
+               Verification: Data sourced from {provider?.active_provider === 'goaccess' && provider?.last_execution_status === 'success' ? 'external binary artifacts' : 'internal DuckDB OLAP engine'}.
+             </p>
+          </div>
         </div>
       </div>
     </PageContainer>

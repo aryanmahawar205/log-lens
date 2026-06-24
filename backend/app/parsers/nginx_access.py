@@ -18,8 +18,8 @@ class NginxAccessParser(BaseParser):
         r'\S+\s+'                         # Remote user (ignored)
         r'\[(?P<timestamp>[^\]]+)\]\s+'   # Time
         r'"(?P<method>\S+)\s+'            # Method
-        r'(?P<url>\S+)\s+'                # URL
-        r'(?P<protocol>[^"]+)"\s+'        # Protocol
+        r'(?P<url>.+)\s+'                 # URL (greedy)
+        r'(?P<protocol>HTTP/\d\.\d)"\s+'  # Protocol
         r'(?P<status_code>\d{3})\s+'      # Status code
         r'(?P<bytes_sent>\S+)\s+'         # Bytes
         r'"(?P<referrer>[^"]*)"\s+'       # Referer
@@ -27,12 +27,51 @@ class NginxAccessParser(BaseParser):
         r'(?:\s+(?P<latency>[0-9.]+))?'   # Optional Latency ($request_time in seconds)
     )
 
+    # Fallback for malformed requests
+    FALLBACK_PATTERN = re.compile(
+        r'(?P<ip>\S+)\s+\S+\s+\S+\s+'
+        r'\[(?P<timestamp>[^\]]+)\]\s+'
+        r'"(?P<request>[^"]+)"\s+'
+        r'(?P<status_code>\d{3})\s+'
+        r'(?P<bytes_sent>\S+)\s+'
+        r'"(?P<referrer>[^"]*)"\s+'
+        r'"(?P<user_agent>[^"]*)"'
+    )
+
     def parse_line(self, line: str) -> Optional[NormalizedLogEntry]:
         match = self.LOG_PATTERN.search(line)
-        if not match:
-            return None
+        if match:
+            data = match.groupdict()
+            method = data['method']
+            full_url = data['url']
+            protocol = data['protocol']
+        else:
+            match = self.FALLBACK_PATTERN.search(line)
+            if not match:
+                return None
+            data = match.groupdict()
+            request_parts = data['request'].split(' ')
+            method = request_parts[0] if len(request_parts) > 0 else "UNKNOWN"
 
-        data = match.groupdict()
+            if len(request_parts) > 1 and "HTTP" in request_parts[-1]:
+                protocol = request_parts[-1]
+                url_end_idx = -1
+            else:
+                protocol = "UNKNOWN"
+                url_end_idx = None
+
+            if url_end_idx is not None:
+                if len(request_parts) > 2:
+                    full_url = " ".join(request_parts[1:url_end_idx])
+                elif len(request_parts) == 2:
+                    full_url = request_parts[1] if "HTTP" not in request_parts[1] else "/"
+                else:
+                    full_url = "/"
+            else:
+                if len(request_parts) > 1:
+                    full_url = " ".join(request_parts[1:])
+                else:
+                    full_url = "/"
 
         # Parse timestamp: 10/Oct/2000:13:55:36 -0700
         try:
@@ -43,7 +82,7 @@ class NginxAccessParser(BaseParser):
         bytes_sent = data['bytes_sent']
         bytes_sent = 0 if bytes_sent == '-' else int(bytes_sent)
 
-        url_parts = data['url'].split('?', 1)
+        url_parts = full_url.split('?', 1)
         url = url_parts[0]
         query_string = url_parts[1] if len(url_parts) > 1 else None
 
@@ -55,13 +94,13 @@ class NginxAccessParser(BaseParser):
         return NormalizedLogEntry(
             timestamp=timestamp,
             ip=data['ip'],
-            method=data['method'],
+            method=method,
             url=url,
             query_string=query_string,
             status_code=int(data['status_code']),
             bytes_sent=bytes_sent,
             referrer=data['referrer'] if data['referrer'] != '-' else None,
             user_agent=data['user_agent'] if data['user_agent'] != '-' else None,
-            protocol=data['protocol'],
+            protocol=protocol,
             response_time_ms=response_time_ms
         )
