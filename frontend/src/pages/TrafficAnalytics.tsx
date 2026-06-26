@@ -5,7 +5,6 @@ import { LoadingState, ErrorState } from '../components/ui/States';
 import { CustomLineChart } from '../components/charts/CustomLineChart';
 import { CustomBarChart } from '../components/charts/CustomBarChart';
 import { useFilterContext } from '../context/FilterContext';
-import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
 
 export function TrafficAnalytics() {
