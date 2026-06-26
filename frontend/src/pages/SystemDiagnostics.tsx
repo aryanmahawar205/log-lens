@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { PageContainer } from '../components/ui/PageContainer';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { fetchApi } from '../utils/api';
-import { Cpu, Terminal, Clock, Server, CheckCircle, XCircle } from 'lucide-react';
+import { Cpu, Terminal, Clock, Server, CheckCircle, XCircle, Shield } from 'lucide-react';
 import { useFilterContext } from '../context/FilterContext';
 
 export function SystemDiagnostics() {
   const { filters } = useFilterContext();
   const [provider, setProvider] = useState<any>(null);
   const [goaccessDiag, setGoaccessDiag] = useState<any>(null);
+  const [sigmaDiag, setSigmaDiag] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -16,12 +17,14 @@ export function SystemDiagnostics() {
     setLoading(true);
     setError(null);
     try {
-      const [provRes, diagRes] = await Promise.all([
+      const [provRes, diagRes, sigmaRes] = await Promise.all([
         fetchApi<any>('/system/provider'),
-        fetchApi<any>('/system/integrations/goaccess', filters)
+        fetchApi<any>('/system/integrations/goaccess', filters),
+        fetchApi<any>('/system/integrations/sigma')
       ]);
       setProvider(provRes);
       setGoaccessDiag(diagRes);
+      setSigmaDiag(sigmaRes);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
@@ -95,6 +98,72 @@ export function SystemDiagnostics() {
               <span className="text-gray-500">Duration</span>
               <span className="font-medium text-gray-200">{provider?.duration ? `${(provider.duration * 1000).toFixed(0)}ms` : 'N/A'}</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center text-orange-400">
+              <Shield className="w-5 h-5 mr-2" />
+              <h3 className="font-semibold text-gray-200">Sigma Engine</h3>
+            </div>
+            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                sigmaDiag?.provider_status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+              }`}>
+                {sigmaDiag?.provider_status?.toUpperCase() || 'UNKNOWN'}
+            </span>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Healthy</span>
+              <span className="font-medium flex items-center">
+                {sigmaDiag?.healthy_state ? (
+                  <><CheckCircle className="w-4 h-4 mr-1 text-emerald-400" /><span className="text-emerald-400">Yes</span></>
+                ) : (
+                  <><XCircle className="w-4 h-4 mr-1 text-rose-400" /><span className="text-rose-400">No</span></>
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Loaded Rules</span>
+              <span className="font-medium text-gray-200">{sigmaDiag?.loaded_rules ?? 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Failed/Ignored</span>
+              <span className="font-medium text-gray-200">{(sigmaDiag?.failed_rules || 0)} / {(sigmaDiag?.ignored_rules || 0)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Last Reload</span>
+              <span className="font-medium text-gray-400 text-sm">{sigmaDiag?.last_reload ? new Date(sigmaDiag.last_reload).toLocaleString() : 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center mb-4 text-purple-400">
+            <Terminal className="w-5 h-5 mr-2" />
+            <h3 className="font-semibold text-gray-200">Sigma Execution</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Execution Count</span>
+              <span className="font-medium text-gray-200">{sigmaDiag?.execution_count ?? 0}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Last Duration</span>
+              <span className="font-medium text-gray-200">{sigmaDiag?.execution_duration !== undefined ? `${(sigmaDiag.execution_duration * 1000).toFixed(0)}ms` : 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Last Executed</span>
+              <span className="font-medium text-gray-400 text-sm">{sigmaDiag?.last_execution_timestamp ? new Date(sigmaDiag.last_execution_timestamp).toLocaleString() : 'N/A'}</span>
+            </div>
+            {sigmaDiag?.last_error && (
+              <div className="mt-2 text-xs text-rose-400 bg-rose-500/10 p-2 rounded break-words">
+                {sigmaDiag.last_error}
+              </div>
+            )}
           </div>
         </div>
       </div>
