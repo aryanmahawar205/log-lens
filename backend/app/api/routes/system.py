@@ -60,3 +60,17 @@ async def get_goaccess_diagnostics(upload_id: Optional[int] = None):
         "last_execution": status.get("execution"),
         "execution_history": history
     }
+
+from fastapi.responses import FileResponse
+import os
+from fastapi import HTTPException
+
+@router.get("/integrations/goaccess/report")
+async def get_goaccess_report(path: str):
+    """Serve the generated GoAccess HTML report."""
+    if not os.path.exists(path) or not path.endswith('.html'):
+        raise HTTPException(status_code=404, detail="Report not found")
+    # Basic path traversal protection
+    if ".." in path or not path.startswith("data/artifacts/goaccess"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return FileResponse(path)

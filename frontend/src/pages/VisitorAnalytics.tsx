@@ -10,8 +10,6 @@ import { fetchApi } from '../utils/api';
 
 export function VisitorAnalytics() {
   const { filters } = useFilterContext();
-  const { selectedDataset } = useDatasetContext();
-  if (!selectedDataset) return null;
   const [visitorData, setVisitorData] = useState<any>(null);
   const [extendedData, setExtendedData] = useState<any>(null);
 

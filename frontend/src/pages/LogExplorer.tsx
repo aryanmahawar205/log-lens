@@ -8,8 +8,6 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export function LogExplorer() {
   const { filters, setFilter } = useFilterContext();
-  const { selectedDataset } = useDatasetContext();
-  if (!selectedDataset) return null;
   const [logsData, setLogsData] = useState<any>(null);
 
   const [loading, setLoading] = useState(true);

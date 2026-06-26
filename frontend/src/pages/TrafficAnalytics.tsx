@@ -10,8 +10,6 @@ import { fetchApi } from '../utils/api';
 
 export function TrafficAnalytics() {
   const { filters } = useFilterContext();
-  const { selectedDataset } = useDatasetContext();
-  if (!selectedDataset) return null;
   const [resolution, setResolution] = useState('hour');
 
   const [timeData, setTimeData] = useState<any[]>([]);

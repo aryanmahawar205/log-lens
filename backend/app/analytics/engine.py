@@ -148,6 +148,10 @@ class NativeAnalyticsProvider(AnalyticsProvider):
         results = self.storage.execute_query(query, tuple(params))
         metrics = results[0] if results else {}
 
+        # Handle null values that DuckDB might return
+        def _to_float(v):
+            return float(v) if v is not None else 0.0
+
         # Slowest endpoints
         slow_query = f"""
             SELECT normalized_url as url, AVG(response_time_ms) as avg_time, COUNT(*) as count
@@ -161,11 +165,11 @@ class NativeAnalyticsProvider(AnalyticsProvider):
         slowest = self.storage.execute_query(slow_query, tuple(params))
 
         return {
-            "avg_response_time": metrics.get("avg_response_time") or 0.0,
-            "median_response_time": metrics.get("median_response_time") or 0.0,
-            "p90_response_time": metrics.get("p90_response_time") or 0.0,
-            "p95_response_time": metrics.get("p95_response_time") or 0.0,
-            "p99_response_time": metrics.get("p99_response_time") or 0.0,
+            "avg_response_time": _to_float(metrics.get("avg_response_time")),
+            "median_response_time": _to_float(metrics.get("median_response_time")),
+            "p90_response_time": _to_float(metrics.get("p90_response_time")),
+            "p95_response_time": _to_float(metrics.get("p95_response_time")),
+            "p99_response_time": _to_float(metrics.get("p99_response_time")),
             "slowest_endpoints": slowest
         }
 
@@ -430,7 +434,7 @@ class NativeAnalyticsProvider(AnalyticsProvider):
         where_condition = QueryBuilder.build_filters(filters)[0]
         params = QueryBuilder.build_filters(filters)[1]
 
-        where_condition = where_condition + " AND response_time_ms IS NOT NULL" if where_condition else " WHERE response_time_ms IS NOT NULL"
+        where_condition_perf = where_condition + " AND response_time_ms IS NOT NULL" if where_condition else " WHERE response_time_ms IS NOT NULL"
 
         fast_query = f"""
             SELECT
@@ -442,7 +446,7 @@ class NativeAnalyticsProvider(AnalyticsProvider):
                 QUANTILE_CONT(response_time_ms, 0.99) as p99_time,
                 COUNT(*) as count
             FROM log_entries
-            {where_condition}
+            {where_condition_perf}
             GROUP BY normalized_url
             HAVING COUNT(*) > 5
             ORDER BY avg_time ASC

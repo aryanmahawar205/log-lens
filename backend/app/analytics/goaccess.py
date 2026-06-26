@@ -52,24 +52,39 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
         return mapping.get(fmt, "COMBINED")
 
-    def _run_goaccess(self, upload_id: int) -> Optional[Dict[str, Any]]:
+    def _run_goaccess(self, upload_id: Optional[int]) -> Optional[Dict[str, Any]]:
         from app.integration_manager import integration_manager
-        log_path = self._get_log_path(upload_id)
-        if not log_path:
-            return None
 
         # Check if goaccess is installed
         if not shutil.which("goaccess"):
             integration_manager.record_execution("goaccess", "failed", 0, {"error": "Binary not found"})
             return None
 
-        log_format = self._get_log_format(upload_id)
+        log_paths = []
+        log_format = "COMBINED"  # Default format for global analysis
+
+        if upload_id:
+            path = self._get_log_path(upload_id)
+            if not path:
+                return None
+            log_paths = [path]
+            log_format = self._get_log_format(upload_id)
+        else:
+            # Global analytics: run over all log files
+            raw_dir = "data/raw_logs"
+            if os.path.exists(raw_dir):
+                for f in os.listdir(raw_dir):
+                    if f.endswith(".log"):
+                        log_paths.append(os.path.join(raw_dir, f))
+            if not log_paths:
+                return None
 
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
             tmp_name = tmp.name
 
         start_time = time.time()
-        artifact_dir = f"data/artifacts/goaccess/{upload_id}"
+        artifact_id = upload_id if upload_id else "global"
+        artifact_dir = f"data/artifacts/goaccess/{artifact_id}"
         os.makedirs(artifact_dir, exist_ok=True)
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -79,7 +94,7 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         try:
             cmd = [
                 "goaccess",
-                log_path,
+                *log_paths,
                 f"--log-format={log_format}",
                 f"--output={json_artifact}",
                 f"--output={html_artifact}",
@@ -112,7 +127,7 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
             self.storage.execute_query("""
                 INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
                 VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'success', ?, ?, ?, ?)
-            """, (upload_id, datetime.now(), duration, version, artifacts_json))
+            """, (upload_id if upload_id else 0, datetime.now(), duration, version, artifacts_json))
 
             return data
         except Exception as e:
@@ -123,7 +138,7 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
             self.storage.execute_query("""
                 INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
                 VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'failed', ?, ?, ?, ?)
-            """, (upload_id, datetime.now(), duration, "unknown", json.dumps({"error": str(e)})))
+            """, (upload_id if upload_id else 0, datetime.now(), duration, "unknown", json.dumps({"error": str(e)})))
             return None
         finally:
             if os.path.exists(tmp_name):
@@ -131,11 +146,6 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def get_traffic_summary(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         upload_id = filters.get("upload_id") if filters else None
-        if not upload_id:
-            return {
-                "total_requests": 0, "hits": 0, "unique_visitors": 0, "total_bytes": 0,
-                "total_sessions": 0, "returning_visitors": 0, "avg_pages_per_session": 0.0, "avg_session_duration_sec": 0.0
-            }
 
         data = self._run_goaccess(upload_id)
         if not data and self.fallback_provider:
@@ -162,7 +172,6 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def get_time_analytics(self, resolution: str = 'hour', filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         upload_id = filters.get("upload_id") if filters else None
-        if not upload_id: return []
 
         data = self._run_goaccess(upload_id)
         if not data and self.fallback_provider:
@@ -201,7 +210,6 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def get_top_urls(self, limit: int = 10, normalized: bool = False, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         upload_id = filters.get("upload_id") if filters else None
-        if not upload_id: return []
 
         data = self._run_goaccess(upload_id)
         if not data and self.fallback_provider:
@@ -221,7 +229,6 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def get_visitor_analytics(self, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Dict[str, List[Dict[str, Any]]]:
         upload_id = filters.get("upload_id") if filters else None
-        if not upload_id: return {"top_ips": [], "top_user_agents": []}
 
         data = self._run_goaccess(upload_id)
         if not data and self.fallback_provider:
@@ -238,7 +245,6 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def get_status_code_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         upload_id = filters.get("upload_id") if filters else None
-        if not upload_id: return {"distribution": [], "success_rate": 0, "client_error_rate": 0, "server_error_rate": 0}
 
         data = self._run_goaccess(upload_id)
         if not data and self.fallback_provider:
@@ -290,7 +296,6 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
     def get_extended_visitor_analytics(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         upload_id = filters.get("upload_id") if filters else None
-        if not upload_id: return {"browser_distribution": [], "os_distribution": []}
 
         data = self._run_goaccess(upload_id)
         if not data and self.fallback_provider:
