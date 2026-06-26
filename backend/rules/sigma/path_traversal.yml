@@ -9,7 +9,11 @@ detection:
         url|contains:
             - '../'
             - '%2e%2e%2f'
-    condition: selection
+    selection2:
+        query_string|contains:
+            - '../'
+            - '%2e%2e%2f'
+    condition: selection or selection2
 falsepositives:
     - Legitimate paths
 level: high

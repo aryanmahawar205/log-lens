@@ -10,11 +10,12 @@ detection:
             - 'UNION SELECT'
             - 'OR 1=1'
             - 'information_schema'
+    selection2:
         query_string|contains:
             - 'UNION SELECT'
             - 'OR 1=1'
             - 'information_schema'
-    condition: selection
+    condition: selection or selection2
 falsepositives:
     - Legitimate queries
 level: critical

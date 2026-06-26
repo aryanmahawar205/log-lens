@@ -47,6 +47,11 @@ class SigmaEngine:
                             if not rule.get("detection"):
                                 self.ignored_rules.append(filename)
                                 continue
+
+                            rule["filename"] = filename
+                            if "status" not in rule:
+                                rule["status"] = "experimental" # Default if missing
+
                             self.rules.append(rule)
                     except Exception as e:
                         print(f"Error loading Sigma rule {filename}: {e}")
@@ -187,11 +192,22 @@ class SigmaEngine:
         selections = {k: v for k, v in detection.items() if k != "condition"}
         return self._parse_condition(condition, selections)
 
-    def execute(self, storage: BaseStorage, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def execute(self, storage: 'BaseStorage', filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         start_time = time.time()
         findings = []
+        execution_id = None
+        upload_id = filters.get("upload_id") if filters else 0
 
         try:
+            # Record execution history and get execution ID
+            res = storage.execute_query("""
+                INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
+                VALUES (nextval('seq_execution_id'), 'sigma', ?, 'running', ?, 0, '1.0', '{}')
+                RETURNING id
+            """, (upload_id if upload_id else 0, datetime.now()))
+            if res:
+                execution_id = res[0]["id"]
+
             from app.analytics.query_builder import QueryBuilder
             base_where, base_params = QueryBuilder.build_filters(filters or {})
 
@@ -226,16 +242,35 @@ class SigmaEngine:
                         "timestamp": r["timestamp"],
                         "ip": r["ip"],
                         "evidence": evidence,
-                        "sigma_source": yaml.dump(rule)
+                        "sigma_source": yaml.dump(rule),
+                        "providers": ["Sigma"],
+                        "filename": rule.get("filename"),
+                        "status": rule.get("status"),
+                        "execution_id": execution_id
                     })
 
             self.execution_count += 1
             self.last_execution_status = "Success"
             self.last_error = None
+
+            if execution_id:
+                storage.execute_query("""
+                    UPDATE external_tool_executions
+                    SET status = 'success', duration_sec = ?
+                    WHERE id = ?
+                """, (time.time() - start_time, execution_id))
         except Exception as e:
             self.last_execution_status = "Failed"
             self.last_error = str(e)
             print(f"Sigma engine error: {e}")
+
+            if execution_id:
+                import json
+                storage.execute_query("""
+                    UPDATE external_tool_executions
+                    SET status = 'failed', duration_sec = ?, artifacts = ?
+                    WHERE id = ?
+                """, (time.time() - start_time, json.dumps({"error": str(e)}), execution_id))
         finally:
             self.last_execution_duration = time.time() - start_time
             self.last_execution_timestamp = datetime.now().isoformat()

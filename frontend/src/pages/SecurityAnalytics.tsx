@@ -220,12 +220,23 @@ export function SecurityAnalytics() {
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
                         <h4 className="font-bold text-gray-200 capitalize">{(finding.rule_title ?? finding.type ?? 'unknown').replace('_', ' ')}</h4>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${finding.sigma_source ? 'border-purple-500/50 text-purple-400 bg-purple-500/10' : 'border-blue-500/50 text-blue-400 bg-blue-500/10'}`}>
-                            {finding.sigma_source ? 'SIGMA' : 'CUSTOM'}
-                        </span>
+                        {(finding.providers ?? []).map((provider: string) => (
+                          <span key={provider} className={`text-[10px] px-1.5 py-0.5 rounded border ${provider === 'Sigma' ? 'border-purple-500/50 text-purple-400 bg-purple-500/10' : 'border-blue-500/50 text-blue-400 bg-blue-500/10'}`}>
+                              {provider.toUpperCase()}
+                          </span>
+                        ))}
                     </div>
                     <span className="text-xs font-mono bg-gray-800 px-2 py-1 rounded text-gray-300">IP: {finding.ip}</span>
                   </div>
+
+                  {finding.providers?.includes('Sigma') && (
+                    <div className="mt-2 flex gap-3 text-[10px] text-gray-400 font-mono">
+                      {finding.filename && <span>FILE: {finding.filename}</span>}
+                      {finding.status && <span>STATUS: {finding.status.toUpperCase()}</span>}
+                      {finding.execution_id && <span>EXEC_ID: #{finding.execution_id}</span>}
+                    </div>
+                  )}
+
                   <div className="mt-2 text-sm text-gray-400">
                     <p className="font-semibold text-gray-300 mb-1">Evidence:</p>
                     <ul className="list-disc pl-5 space-y-1">
