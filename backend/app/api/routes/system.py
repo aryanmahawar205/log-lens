@@ -74,3 +74,11 @@ async def get_goaccess_report(path: str):
     if ".." in path or not path.startswith("data/artifacts/goaccess"):
         raise HTTPException(status_code=403, detail="Forbidden")
     return FileResponse(path)
+
+@router.get("/integrations/sigma")
+async def get_sigma_diagnostics():
+    """
+    Get detailed diagnostics for Sigma engine.
+    """
+    from app.api.routes.security import security_analyzer
+    return security_analyzer.sigma_engine.get_diagnostics()

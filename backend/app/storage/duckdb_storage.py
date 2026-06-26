@@ -1,4 +1,5 @@
 import duckdb
+import urllib.parse
 from typing import List, Dict, Any
 from app.models.schema import NormalizedLogEntry
 from app.storage.base import BaseStorage
@@ -115,13 +116,18 @@ class DuckDBStorage(BaseStorage):
         for entry in entries:
             normalized_url = URLNormalizer.normalize(entry.url)
             bot_classification = BotDetector.classify(entry.user_agent)
+
+            # URL Decode fields so external detectors (like Sigma) can match plaintext
+            decoded_url = urllib.parse.unquote(entry.url) if entry.url else entry.url
+            decoded_query = urllib.parse.unquote(entry.query_string) if entry.query_string else entry.query_string
+
             data.append((
                 upload_id,
                 entry.timestamp,
                 entry.ip,
                 entry.method,
-                entry.url,
-                entry.query_string,
+                decoded_url,
+                decoded_query,
                 entry.status_code,
                 entry.bytes_sent,
                 entry.request_size_bytes,

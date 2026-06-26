@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from datetime import datetime
 from typing import Optional
 from app.models.schema import NormalizedLogEntry
@@ -83,8 +84,8 @@ class NginxAccessParser(BaseParser):
         bytes_sent = 0 if bytes_sent == '-' else int(bytes_sent)
 
         url_parts = full_url.split('?', 1)
-        url = url_parts[0]
-        query_string = url_parts[1] if len(url_parts) > 1 else None
+        url = urllib.parse.unquote(url_parts[0])
+        query_string = urllib.parse.unquote(url_parts[1]) if len(url_parts) > 1 else None
 
         # Convert seconds to milliseconds if present
         response_time_ms = None
