@@ -3,6 +3,7 @@ import subprocess
 import shutil
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from app.config import config
 
 class IntegrationManager:
     """
@@ -15,11 +16,6 @@ class IntegrationManager:
                 "name": "GoAccess",
                 "type": "analytics",
                 "binary": "goaccess"
-            },
-            "sigma": {
-                "name": "Sigma",
-                "type": "security",
-                "version": "1.0.0" # Internal versioning
             },
             "duckdb": {
                 "name": "DuckDB",
@@ -42,18 +38,19 @@ class IntegrationManager:
         """Check if a tool is installed and available."""
         info = self.integrations.get(tool_key)
         if not info:
-            return False
+            # Fallback for dynamic providers
+            return True
 
         binary = info.get("binary")
         if binary:
             return shutil.which(binary) is not None
 
-        # Non-binary tools (like sigma) are checked differently if needed
         return True
 
     def get_tool_status(self) -> Dict[str, Any]:
         """
         Get the status and version of all registered integrations.
+        Includes dynamic status from Security DetectionManager.
         """
         status = {}
         for key, info in self.integrations.items():
@@ -90,22 +87,38 @@ class IntegrationManager:
                     tool_status["healthy"] = False
                     tool_status["enabled"] = False
 
-            elif key == "sigma":
-                # Assuming sigma rules are in a specific directory
-                rules_dir = "backend/rules/sigma"
-                if os.path.exists(rules_dir):
-                    rule_count = len([f for f in os.listdir(rules_dir) if f.endswith(".yml") or f.endswith(".yaml")])
-                    tool_status["rule_count"] = rule_count
-                else:
-                    tool_status["rule_count"] = 0
-                tool_status["version"] = info.get("version")
-                tool_status["healthy"] = True
-
             # Add execution metadata if available
             if key in self.execution_metadata:
                 tool_status["execution"] = self.execution_metadata[key]
 
             status[key] = tool_status
+
+        # Dynamically fetch Detection Providers
+        try:
+            # Import here to avoid circular imports during startup
+            from app.api.routes.security import security_analyzer
+            if security_analyzer and hasattr(security_analyzer, 'manager'):
+                providers_status = security_analyzer.manager.get_providers_status()
+                for p_name, p_status in providers_status.items():
+                    # For Sigma specifically, map keys to what the user requested
+                    if p_name == 'sigma':
+                        status['sigma'] = {
+                            "enabled": p_status.get("enabled", False),
+                            "healthy": p_status.get("healthy", False),
+                            "provider": p_status.get("provider"),
+                            "version": p_status.get("version"),
+                            "rule_count": p_status.get("rule_count"),
+                            "loaded_rules": p_status.get("loaded_rules"),
+                            "failed_rules": p_status.get("failed_rules"),
+                            "ignored_rules": p_status.get("ignored_rules", 0),
+                            "last_reload": p_status.get("last_reload"),
+                            "last_execution": p_status.get("last_execution"),
+                            "processing_time_ms": p_status.get("processing_time_ms")
+                        }
+                    else:
+                        status[p_name] = p_status
+        except Exception as e:
+            print(f"Error fetching detection provider status: {e}")
 
         return status
 
