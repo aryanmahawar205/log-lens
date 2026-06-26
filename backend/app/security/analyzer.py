@@ -34,6 +34,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["first_seen"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [f"{r['failed_logins']} failed logins, {r['attempt_count']} total attempts on {r['target_endpoint']}"]
             })
         return findings
@@ -62,6 +63,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["first_seen"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [f"Probed {r['unique_paths']} sensitive paths, {r['not_found_count']} 404s"]
             })
         return findings
@@ -94,6 +96,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["timestamp"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [evidence_str]
             })
         return findings
@@ -124,6 +127,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["timestamp"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [evidence_str]
             })
         return findings
@@ -157,6 +161,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["first_seen"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [f"Scanner UA: {r['user_agent']}, requests: {r['request_count']}"]
             })
         return findings
@@ -189,6 +194,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["timestamp"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [f"Potential command injection detected in {evidence_str}"]
             })
         return findings
@@ -218,6 +224,7 @@ class SecurityAnalyzer:
                 "dataset_id": upload_id,
                 "timestamp": r["timestamp"],
                 "ip": r["ip"],
+                "providers": ["Native Detection"],
                 "evidence": [f"Path traversal sequence detected in {evidence_str}"]
             })
         return findings

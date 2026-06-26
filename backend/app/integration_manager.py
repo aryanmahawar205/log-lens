@@ -97,26 +97,21 @@ class IntegrationManager:
         try:
             # Import here to avoid circular imports during startup
             from app.api.routes.security import security_analyzer
-            if security_analyzer and hasattr(security_analyzer, 'manager'):
-                providers_status = security_analyzer.manager.get_providers_status()
-                for p_name, p_status in providers_status.items():
-                    # For Sigma specifically, map keys to what the user requested
-                    if p_name == 'sigma':
-                        status['sigma'] = {
-                            "enabled": p_status.get("enabled", False),
-                            "healthy": p_status.get("healthy", False),
-                            "provider": p_status.get("provider"),
-                            "version": p_status.get("version"),
-                            "rule_count": p_status.get("rule_count"),
-                            "loaded_rules": p_status.get("loaded_rules"),
-                            "failed_rules": p_status.get("failed_rules"),
-                            "ignored_rules": p_status.get("ignored_rules", 0),
-                            "last_reload": p_status.get("last_reload"),
-                            "last_execution": p_status.get("last_execution"),
-                            "processing_time_ms": p_status.get("processing_time_ms")
-                        }
-                    else:
-                        status[p_name] = p_status
+            if security_analyzer and hasattr(security_analyzer, 'sigma_engine'):
+                sigma_diag = security_analyzer.sigma_engine.get_diagnostics()
+                status['sigma'] = {
+                    "enabled": sigma_diag.get("enabled", False),
+                    "healthy": sigma_diag.get("healthy_state", False),
+                    "provider": "SigmaEngine",
+                    "version": sigma_diag.get("version"),
+                    "rule_count": sigma_diag.get("loaded_rules"),
+                    "loaded_rules": sigma_diag.get("loaded_rules"),
+                    "failed_rules": sigma_diag.get("failed_rules"),
+                    "ignored_rules": sigma_diag.get("ignored_rules", 0),
+                    "last_reload": sigma_diag.get("last_reload"),
+                    "last_execution": sigma_diag.get("last_execution_timestamp"),
+                    "processing_time_ms": sigma_diag.get("execution_duration", 0) * 1000 if sigma_diag.get("execution_duration") else 0
+                }
         except Exception as e:
             print(f"Error fetching detection provider status: {e}")
 
