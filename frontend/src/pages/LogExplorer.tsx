@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { PageContainer } from '../components/ui/PageContainer';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { useFilterContext } from '../context/FilterContext';
-import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 

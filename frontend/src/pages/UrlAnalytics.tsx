@@ -4,7 +4,6 @@ import { ChartCard } from '../components/ui/ChartCard';
 import { DataTable, type ColumnDef } from '../components/ui/DataTable';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { useFilterContext } from '../context/FilterContext';
-import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
 
 export function UrlAnalytics() {

@@ -6,7 +6,6 @@ import { DataTable, type ColumnDef } from '../components/ui/DataTable';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { CustomLineChart } from '../components/charts/CustomLineChart';
 import { useFilterContext } from '../context/FilterContext';
-import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
 import { Clock, Zap } from 'lucide-react';
 

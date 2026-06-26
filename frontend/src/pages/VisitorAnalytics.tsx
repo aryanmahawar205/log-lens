@@ -5,7 +5,6 @@ import { DataTable, type ColumnDef } from '../components/ui/DataTable';
 import { LoadingState, ErrorState } from '../components/ui/States';
 import { CustomPieChart } from '../components/charts/CustomPieChart';
 import { useFilterContext } from '../context/FilterContext';
-import { useDatasetContext } from '../context/DatasetContext';
 import { fetchApi } from '../utils/api';
 
 export function VisitorAnalytics() {
@@ -35,7 +34,7 @@ export function VisitorAnalytics() {
 
   useEffect(() => {
     loadData();
-  }, [filters, selectedDataset]);
+  }, [filters]);
 
   if (loading && !visitorData) return <PageContainer title="Visitor Analytics"><LoadingState /></PageContainer>;
   if (error) return <PageContainer title="Visitor Analytics"><ErrorState error={error} retry={loadData} /></PageContainer>;
