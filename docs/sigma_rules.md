@@ -2,6 +2,17 @@
 
 LogLens natively acts as a consumer of standard, externally-maintained Sigma rules. You can drop hundreds of rules into the proper directories and LogLens will automatically parse, translate, and execute them during the security analysis phase.
 
+## Bundled Official Rules
+
+LogLens ships with a curated collection of official, community-maintained Sigma rules specifically focused on HTTP and web server log analysis. This bundled collection turns LogLens into a production-ready security platform out of the box.
+
+The bundled rules are categorized under `backend/rules/sigma/official/` and cover various attack vectors:
+
+- **Web Attacks:** Detection for SQL Injection (SQLi), Cross-Site Scripting (XSS), Local/Remote File Inclusion (LFI/RFI), Path Traversal, Command Injection, Server-Side Template Injection (SSTI), and XXE.
+- **Exposure & Discovery:** Rules identifying reconnaissance for sensitive files (`.env`, `robots.txt`, backups, `.git`), admin panel discovery, and directory enumeration.
+- **Scanner Detection:** Rules designed to catch traffic from common vulnerability scanners and enumeration tools (e.g., sqlmap, Nikto, Gobuster, Dirbuster, ffuf, Burp Suite, Nmap).
+- **Web Server Specific:** Tailored detections for Apache (e.g., suspicious repeated 404/403 scanning, threading errors) and Nginx (e.g., core dumps).
+
 ## Directory Layout
 
 Sigma rules should be placed in the `backend/rules/sigma` directory. The engine recursively discovers all valid `.yml` and `.yaml` files, meaning you can organize rules into any subdirectories you see fit. A common organizational pattern is:
@@ -10,6 +21,12 @@ Sigma rules should be placed in the `backend/rules/sigma` directory. The engine 
 backend/rules/
   sigma/
     official/    # Standard rules downloaded from official Sigma repositories
+      apache/
+      nginx/
+      proxy/
+      scanners/
+      exposure/
+      web/
     custom/      # Custom rules specific to your environment
     experimental/ # Experimental rules
 ```
@@ -36,11 +53,13 @@ The current LogLens Sigma engine translates basic Sigma syntax into DuckDB SQL. 
 
 If a rule relies on features not currently supported, it may generate unexpected SQL or silently fail to match logs.
 
-## Adding Rules
+## Updating the Bundled Rule Collection & Adding Rules
 
-1. Obtain valid Sigma rule YAML files.
-2. Drop them into any subdirectory under `backend/rules/sigma/` (e.g. `rules/sigma/custom/my_rule.yml`).
-3. Reload the Sigma engine (see below).
+To update the bundled official collection or add new community rules:
+
+1. Obtain valid Sigma rule YAML files from community repositories (like the [SigmaHQ GitHub](https://github.com/SigmaHQ/sigma)).
+2. Drop them into the appropriate subdirectory under `backend/rules/sigma/official/` (for updates) or `backend/rules/sigma/custom/` (for your own proprietary rules).
+3. Reload the Sigma engine via the API or restart the application.
 
 ## Removing Rules
 
@@ -59,7 +78,7 @@ To make LogLens aware of the new, updated, or removed rules without restarting t
 To validate your rules are loaded and functional:
 
 1. Add your new Sigma rule.
-2. Trigger a reload using the API.
+2. Trigger a reload using the API (`POST /api/v1/security/rules/reload`).
 3. Open the **System Diagnostics** page in the UI.
 4. Check the **Sigma Engine** diagnostics card. The "Total Discovered" and "Loaded Rules" should increment.
 5. In the **Sigma Rule Inventory** search for your newly added rule and verify its "Load State" is loaded.

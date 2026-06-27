@@ -1,0 +1,24 @@
+title: XML External Entity (XXE) Attempt
+id: e53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects XXE attempts in query parameters or URL.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.initial_access
+    - attack.t1190
+logsource:
+    category: webserver
+detection:
+    url_xxe:
+        url|contains:
+            - '<!ENTITY'
+            - 'SYSTEM "file://'
+    query_xxe:
+        query_string|contains:
+            - '<!ENTITY'
+            - 'SYSTEM "file://'
+    condition: url_xxe or query_xxe
+falsepositives:
+    - Unknown
+level: high

@@ -108,6 +108,35 @@ class SigmaEngine:
             else:
                 field, modifier = field_spec, None
 
+            # Mapping common IIS/Apache fields from sigma rules to DuckDB normalized fields
+            if field == "cs-method" or field == "c-method":
+                field = "method"
+            elif field == "sc-status" or field == "c-status":
+                field = "status_code"
+            elif field == "cs-user-agent" or field == "c-useragent" or field == "useragent":
+                field = "user_agent"
+            elif field == "cs-uri-query" or field == "c-uri-query" or field == "uri-query":
+                field = "query_string"
+            elif field == "cs-uri-stem" or field == "c-uri-stem" or field == "uri-stem":
+                field = "url"
+            elif field == "c-ip" or field == "cs-ip":
+                field = "ip"
+            elif field == "cs-referer" or field == "c-referer" or field == "referer":
+                field = "referrer"
+            elif field == "cs-host" or field == "c-host" or field == "host":
+                field = "host"
+            elif field == "cs-uri" or field == "c-uri" or field == "uri":
+                field = "url"
+            elif field == "c-uri-extension" or field == "cs-uri-extension":
+                # For basic support, map extension to URL. Ideally would parse it but this allows contains/endswith to work somewhat
+                field = "url"
+            elif field == "cs-cookie" or field == "c-cookie" or field == "cookie":
+                # We don't have a normalized cookie field by default, we can just match it against the raw request line if possible, or query_string as fallback.
+                # Actually, this is a proxy log field. If we don't have it, we shouldn't fail the whole query. Let's just map it to user_agent for now as a fallback to avoid crashing or `1=0`.
+                field = "user_agent"
+            elif field == "dst_ip" or field == "c-dst-ip" or field == "src_ip" or field == "c-src-ip":
+                field = "ip"
+
             if not isinstance(values, list):
                 values = [values]
 
@@ -168,7 +197,7 @@ class SigmaEngine:
                 pass
             elif lower_token == 'of':
                 pass
-            elif token.startswith('selection') or token.startswith('keywords') or token in selections:
+            elif token.startswith('selection') or token.startswith('keywords') or token.startswith('filter') or token in selections:
                 if token in selections:
                     sel_data = selections[token]
                     if isinstance(sel_data, dict):

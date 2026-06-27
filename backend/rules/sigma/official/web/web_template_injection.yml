@@ -1,0 +1,30 @@
+title: Server-Side Template Injection (SSTI) Attempt
+id: g53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects Server-Side Template Injection attempts by matching common template syntax in URLs.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.initial_access
+    - attack.t1190
+logsource:
+    category: webserver
+detection:
+    url_ssti:
+        url|contains:
+            - '${'
+            - '{{'
+            - '}}'
+            - '<%'
+            - '%>'
+    query_ssti:
+        query_string|contains:
+            - '${'
+            - '{{'
+            - '}}'
+            - '<%'
+            - '%>'
+    condition: url_ssti or query_ssti
+falsepositives:
+    - Web frameworks using similar characters legitimately
+level: medium

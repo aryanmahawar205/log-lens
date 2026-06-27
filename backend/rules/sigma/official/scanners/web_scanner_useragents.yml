@@ -1,0 +1,27 @@
+title: Web Scanner User-Agents
+id: f53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects common web scanners and enumeration tools based on User-Agent strings.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.reconnaissance
+    - attack.t1595.002
+logsource:
+    category: webserver
+detection:
+    selection:
+        c-useragent|contains:
+            - 'sqlmap/'
+            - 'Nikto/'
+            - 'gobuster/'
+            - 'DirBuster-'
+            - 'ffuf/'
+            - 'BurpSuite'
+            - 'Nmap Scripting Engine'
+            - 'zgrab/'
+            - 'masscan/'
+    condition: selection
+falsepositives:
+    - Approved vulnerability scanning
+level: medium

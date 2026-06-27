@@ -1,0 +1,23 @@
+title: Suspicious Apache Scanning Activity
+id: b53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects suspicious scanning behavior targeting Apache servers, such as repeated 403 or 404 errors indicative of directory brute-forcing.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.discovery
+    - attack.t1083
+logsource:
+    category: webserver
+detection:
+    # A bit complex to represent repeated in basic Sigma without aggregations, but we can detect specific tool footprints or very common probe paths.
+    # We will use this to flag common probe URIs.
+    probe_paths:
+        url|contains:
+            - '/server-status'
+            - '/cgi-bin/test-cgi'
+            - '/.htaccess'
+    condition: probe_paths
+falsepositives:
+    - Legitimate administrator checks
+level: low

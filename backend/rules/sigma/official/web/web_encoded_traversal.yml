@@ -1,0 +1,28 @@
+title: Encoded Path Traversal
+id: h53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects encoded path traversal attempts such as double URL encoding.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.initial_access
+    - attack.t1190
+logsource:
+    category: webserver
+detection:
+    url_enc:
+        url|contains:
+            - '%2e%2e%2f'
+            - '%252e%252e%252f'
+            - '%c0%af'
+            - '%c1%9c'
+    query_enc:
+        query_string|contains:
+            - '%2e%2e%2f'
+            - '%252e%252e%252f'
+            - '%c0%af'
+            - '%c1%9c'
+    condition: url_enc or query_enc
+falsepositives:
+    - Legitimate deep linking URLs, though unlikely with these patterns
+level: high

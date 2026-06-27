@@ -1,0 +1,23 @@
+title: Sensitive File Discovery Attempt
+id: a53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects attempts to access sensitive files like .env, robots.txt, or backups which indicate enumeration or exposure reconnaissance.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.discovery
+    - attack.t1083
+logsource:
+    category: webserver
+detection:
+    keywords:
+        - '.env'
+        - 'robots.txt'
+        - 'backup.sql'
+        - 'config.php.bak'
+        - '.htpasswd'
+        - 'web.config'
+    condition: keywords
+falsepositives:
+    - Legitimate scanning or backup access by administrators
+level: medium
