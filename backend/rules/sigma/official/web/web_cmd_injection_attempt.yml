@@ -1,0 +1,34 @@
+title: Command Injection Attempt
+id: d53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects command injection attempts in the URL or query string.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.execution
+    - attack.t1059
+logsource:
+    category: webserver
+detection:
+    url_cmd:
+        url|contains:
+            - '/bin/sh'
+            - '/bin/bash'
+            - 'cmd.exe'
+            - 'powershell.exe'
+            - 'wget '
+            - 'curl '
+            - 'nc -e'
+    query_cmd:
+        query_string|contains:
+            - '/bin/sh'
+            - '/bin/bash'
+            - 'cmd.exe'
+            - 'powershell.exe'
+            - 'wget '
+            - 'curl '
+            - 'nc -e'
+    condition: url_cmd or query_cmd
+falsepositives:
+    - Legitimate administration scripts if badly designed
+level: critical

@@ -1,0 +1,24 @@
+title: Admin Panel Discovery
+id: i53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects suspicious requests indicating admin panel enumeration or discovery.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.discovery
+    - attack.t1083
+logsource:
+    category: webserver
+detection:
+    url_admin:
+        url|contains:
+            - '/admin/'
+            - '/administrator/'
+            - '/wp-admin/'
+            - '/cpanel/'
+            - '/phpmyadmin/'
+            - '/manager/html'
+    condition: url_admin
+falsepositives:
+    - Legitimate administrator logins
+level: low

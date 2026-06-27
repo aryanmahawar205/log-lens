@@ -1,0 +1,32 @@
+title: Local/Remote File Inclusion (LFI/RFI) Attempt
+id: c53d460b-f810-420a-97a2-cfca4c98e602
+status: experimental
+description: Detects potential LFI or RFI attempts by searching for common payload keywords in the URL or query string.
+author: Jules
+date: 2024-06-27
+tags:
+    - attack.initial_access
+    - attack.t1190
+logsource:
+    category: webserver
+detection:
+    url_lfi:
+        url|contains:
+            - 'etc/passwd'
+            - 'windows/win.ini'
+            - 'boot.ini'
+            - 'file://'
+            - 'php://filter'
+            - 'php://input'
+    query_lfi:
+        query_string|contains:
+            - 'etc/passwd'
+            - 'windows/win.ini'
+            - 'boot.ini'
+            - 'file://'
+            - 'php://filter'
+            - 'php://input'
+    condition: url_lfi or query_lfi
+falsepositives:
+    - Unknown
+level: high
