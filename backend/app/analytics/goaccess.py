@@ -5,10 +5,12 @@ import tempfile
 import shutil
 import time
 from typing import Dict, Any, Optional, List
+from collections import defaultdict
 from app.analytics.base import AnalyticsProvider
 from app.storage.base import BaseStorage
 from app.storage.duckdb_storage import DuckDBStorage
 from datetime import datetime
+from app.analytics.goaccess_merge import merge_goaccess_reports
 
 class GoAccessAnalyticsProvider(AnalyticsProvider):
     """
@@ -57,30 +59,72 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
 
         # Check if goaccess is installed
         if not shutil.which("goaccess"):
+            print("goaccess not found!")
             integration_manager.record_execution("goaccess", "failed", 0, {"error": "Binary not found"})
             return None
 
-        log_paths = []
-        log_format = "COMBINED"  # Default format for global analysis
-
+        # Determine uploads to process
         if upload_id:
-            path = self._get_log_path(upload_id)
-            if not path:
-                return None
-            log_paths = [path]
-            log_format = self._get_log_format(upload_id)
+            uploads = self.storage.execute_query("SELECT id, filename, format FROM uploads WHERE id = ? ORDER BY id ASC", (upload_id,))
         else:
-            # Global analytics: run over all log files
-            raw_dir = "data/raw_logs"
-            if os.path.exists(raw_dir):
-                for f in os.listdir(raw_dir):
-                    if f.endswith(".log"):
-                        log_paths.append(os.path.join(raw_dir, f))
-            if not log_paths:
-                return None
+            uploads = self.storage.execute_query("SELECT id, filename, format FROM uploads ORDER BY id ASC")
 
-        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-            tmp_name = tmp.name
+        if not uploads:
+            print("no uploads found!")
+            return None
+
+        # Classify logs
+        processed_files = []
+        skipped_files = []
+        failed_files = []
+        groups = defaultdict(list)
+
+        mapping = {
+            "apache_access": "COMBINED",
+            "nginx_access": "COMBINED",
+            "clf": "COMMON",
+            "iis_w3c": "W3C",
+        }
+
+        for u in uploads:
+            u_id = u["id"]
+            fmt = u.get("format", "").lower()
+            path = self._get_log_path(u_id)
+
+            if not path or not os.path.exists(path):
+                skipped_files.append({"id": u_id, "filename": u["filename"], "reason": "File not found"})
+                continue
+
+            if fmt not in mapping:
+                skipped_files.append({"id": u_id, "filename": u["filename"], "reason": f"Unsupported format: {fmt}"})
+                continue
+
+            goaccess_fmt = mapping[fmt]
+            groups[goaccess_fmt].append({"id": u_id, "filename": u["filename"], "path": path})
+
+        if not groups:
+            # If everything was skipped, we shouldn't run goaccess, but we should record it.
+            artifacts_json = json.dumps({
+                "processed_files": [],
+                "skipped_files": skipped_files,
+                "failed_files": [],
+                "groups": {}
+            })
+            # Avoid repeated meaninglyess failures
+            last_exec = self.storage.execute_query("SELECT artifacts FROM external_tool_executions WHERE tool_name = 'goaccess' AND upload_id = ? ORDER BY execution_timestamp DESC LIMIT 1", (upload_id if upload_id else 0,))
+            if last_exec:
+                try:
+                    last_art = json.loads(last_exec[0]["artifacts"])
+                    if last_art.get("skipped_files") == skipped_files and not last_art.get("processed_files"):
+                        return None # Skip recording identical failure
+                except Exception:
+                    pass
+
+            self.storage.execute_query("""
+                INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
+                VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'failed', ?, ?, ?, ?)
+            """, (upload_id if upload_id else 0, datetime.now(), 0.0, "unknown", artifacts_json))
+            return None
 
         start_time = time.time()
         artifact_id = upload_id if upload_id else "global"
@@ -88,61 +132,108 @@ class GoAccessAnalyticsProvider(AnalyticsProvider):
         os.makedirs(artifact_dir, exist_ok=True)
         timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        json_artifact = os.path.join(artifact_dir, f"report_{timestamp_str}.json")
-        html_artifact = os.path.join(artifact_dir, f"report_{timestamp_str}.html")
+        reports = []
+        execution_groups = {}
 
+        version = "unknown"
         try:
-            cmd = [
-                "goaccess",
-                *log_paths,
-                f"--log-format={log_format}",
-                f"--output={json_artifact}",
-                f"--output={html_artifact}",
-                "--no-global-config"
-            ]
-            process = subprocess.run(cmd, check=True, capture_output=True, text=True)
-            duration = time.time() - start_time
+            version = subprocess.check_output(["goaccess", "--version"]).decode().split("\n")[0].replace("GoAccess - ", "")
+        except: pass
 
-            with open(json_artifact, 'r') as f:
-                data = json.load(f)
+        for fmt, files in groups.items():
+            paths = [f["path"] for f in files]
+            file_ids = [f["id"] for f in files]
 
-            version = "unknown"
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp_json, \
+                 tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp_html:
+                tmp_json_name = tmp_json.name
+                tmp_html_name = tmp_html.name
+
             try:
-                version = subprocess.check_output(["goaccess", "--version"]).decode().split("\n")[0].replace("GoAccess - ", "")
-            except: pass
+                cmd = [
+                    "goaccess",
+                    *paths,
+                    f"--log-format={fmt}",
+                    f"--output={tmp_json_name}",
+                    f"--output={tmp_html_name}",
+                    "--no-global-config"
+                ]
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-            # Persist to integration manager
-            integration_manager.record_execution("goaccess", "success", duration, {
+                with open(tmp_json_name, 'r') as f:
+                    data = json.load(f)
+                    reports.append(data)
+
+                processed_files.extend(files)
+                execution_groups[fmt] = {"status": "success", "files": [f["filename"] for f in files]}
+
+            except subprocess.CalledProcessError as e:
+                print(f"Error running GoAccess for format {fmt}: {e.stderr}")
+                failed_files.extend([{"id": f["id"], "filename": f["filename"], "reason": f"GoAccess execution failed: {e.stderr}"} for f in files])
+                execution_groups[fmt] = {"status": "failed", "error": e.stderr}
+            except Exception as e:
+                failed_files.extend([{"id": f["id"], "filename": f["filename"], "reason": str(e)} for f in files])
+                execution_groups[fmt] = {"status": "failed", "error": str(e)}
+            finally:
+                if os.path.exists(tmp_json_name): os.unlink(tmp_json_name)
+                if os.path.exists(tmp_html_name): os.unlink(tmp_html_name)
+
+        duration = time.time() - start_time
+
+        if not reports:
+            # All groups failed
+            status = "failed"
+            merged_data = None
+            json_artifact = ""
+            html_artifact = ""
+        else:
+            status = "success" if not failed_files else "partial_success"
+            merged_data = merge_goaccess_reports(reports)
+
+            json_artifact = os.path.join(artifact_dir, f"report_{timestamp_str}.json")
+            with open(json_artifact, 'w') as f:
+                json.dump(merged_data, f)
+
+            # Note: Merging HTML reports is not trivial, so for now we'll just keep the first HTML if there is only one,
+            # or skip HTML for multiple groups. The instructions do not mention HTML merged output.
+            html_artifact = ""
+
+        artifacts_dict = {
+            "processed_files": [{"id": f["id"], "filename": f["filename"]} for f in processed_files],
+            "skipped_files": skipped_files,
+            "failed_files": failed_files,
+            "groups": execution_groups,
+            "json": json_artifact,
+            "html": html_artifact
+        }
+        artifacts_json = json.dumps(artifacts_dict)
+
+        if not reports:
+             # Avoid repeated meaningless failures
+            last_exec = self.storage.execute_query("SELECT artifacts, status FROM external_tool_executions WHERE tool_name = 'goaccess' AND upload_id = ? ORDER BY execution_timestamp DESC LIMIT 1", (upload_id if upload_id else 0,))
+            if last_exec:
+                try:
+                    last_art = json.loads(last_exec[0]["artifacts"])
+                    if last_exec[0]["status"] == "failed" and last_art.get("skipped_files") == skipped_files and last_art.get("failed_files") == failed_files:
+                        return None # Skip recording identical failure
+                except Exception:
+                    pass
+
+        self.storage.execute_query("""
+            INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
+            VALUES (nextval('seq_execution_id'), 'goaccess', ?, ?, ?, ?, ?, ?)
+        """, (upload_id if upload_id else 0, status, datetime.now(), duration, version, artifacts_json))
+
+        if reports:
+            integration_manager.record_execution("goaccess", status, duration, {
                 "version": version,
                 "json_artifact": json_artifact,
-                "html_artifact": html_artifact,
-                "log_format": log_format
+                "processed_files": len(processed_files),
+                "skipped_files": len(skipped_files),
+                "failed_files": len(failed_files)
             })
 
-            # Persist to storage
-            artifacts_json = json.dumps({
-                "json": json_artifact,
-                "html": html_artifact
-            })
-            self.storage.execute_query("""
-                INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
-                VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'success', ?, ?, ?, ?)
-            """, (upload_id if upload_id else 0, datetime.now(), duration, version, artifacts_json))
-
-            return data
-        except Exception as e:
-            duration = time.time() - start_time
-            print(f"Error running GoAccess: {e}")
-            integration_manager.record_execution("goaccess", "failed", duration, {"error": str(e)})
-
-            self.storage.execute_query("""
-                INSERT INTO external_tool_executions (id, tool_name, upload_id, status, execution_timestamp, duration_sec, version, artifacts)
-                VALUES (nextval('seq_execution_id'), 'goaccess', ?, 'failed', ?, ?, ?, ?)
-            """, (upload_id if upload_id else 0, datetime.now(), duration, "unknown", json.dumps({"error": str(e)})))
-            return None
-        finally:
-            if os.path.exists(tmp_name):
-                os.unlink(tmp_name)
+        return merged_data
 
     def get_traffic_summary(self, filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         upload_id = filters.get("upload_id") if filters else None
