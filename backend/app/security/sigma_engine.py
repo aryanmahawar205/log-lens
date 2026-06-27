@@ -17,6 +17,9 @@ class SigmaEngine:
 
         # Diagnostics state
         self.last_reload = None
+        self.last_reload_duration = 0.0
+        self.total_discovered_rules = 0
+        self.directories_scanned = 0
         self.execution_count = 0
         self.last_execution_status = "Not executed"
         self.last_execution_duration = 0.0
@@ -24,40 +27,64 @@ class SigmaEngine:
         self.last_error = None
         self.failed_rules = []
         self.ignored_rules = []
+        self.duplicate_rules = []
 
         self.load_rules()
 
     def load_rules(self):
+        start_time = time.time()
         self.rules = []
         self.failed_rules = []
         self.ignored_rules = []
+        self.duplicate_rules = []
+        self.total_discovered_rules = 0
+        self.directories_scanned = 0
+
+        loaded_ids = set()
 
         if not os.path.exists(self.rules_path):
             self.last_error = f"Rules path {self.rules_path} does not exist"
             self.last_reload = datetime.now().isoformat()
+            self.last_reload_duration = time.time() - start_time
             return
 
-        for filename in os.listdir(self.rules_path):
-            if filename.endswith(".yml") or filename.endswith(".yaml"):
-                with open(os.path.join(self.rules_path, filename), "r") as f:
+        for root, dirs, files in os.walk(self.rules_path):
+            self.directories_scanned += 1
+            for filename in files:
+                if filename.endswith(".yml") or filename.endswith(".yaml"):
+                    self.total_discovered_rules += 1
+                    filepath = os.path.join(root, filename)
+                    # Create a friendly relative path for reporting
+                    rel_filepath = os.path.relpath(filepath, self.rules_path)
+
                     try:
-                        rule = yaml.safe_load(f)
-                        if rule:
-                            # Validate minimum fields
-                            if not rule.get("detection"):
-                                self.ignored_rules.append(filename)
-                                continue
+                        with open(filepath, "r") as f:
+                            rule = yaml.safe_load(f)
+                            if rule:
+                                # Validate minimum fields
+                                if not rule.get("detection"):
+                                    self.ignored_rules.append(rel_filepath)
+                                    continue
 
-                            rule["filename"] = filename
-                            if "status" not in rule:
-                                rule["status"] = "experimental" # Default if missing
+                                rule_id = rule.get("id")
+                                if rule_id:
+                                    if rule_id in loaded_ids:
+                                        self.duplicate_rules.append(rel_filepath)
+                                        self.failed_rules.append(rel_filepath)
+                                        continue
+                                    loaded_ids.add(rule_id)
 
-                            self.rules.append(rule)
+                                rule["filename"] = rel_filepath
+                                if "status" not in rule:
+                                    rule["status"] = "experimental" # Default if missing
+
+                                self.rules.append(rule)
                     except Exception as e:
-                        print(f"Error loading Sigma rule {filename}: {e}")
-                        self.failed_rules.append(filename)
+                        print(f"Error loading Sigma rule {rel_filepath}: {e}")
+                        self.failed_rules.append(rel_filepath)
 
         self.last_reload = datetime.now().isoformat()
+        self.last_reload_duration = time.time() - start_time
         self.last_error = None
 
     def get_rules(self) -> List[Dict[str, Any]]:
@@ -283,10 +310,14 @@ class SigmaEngine:
             "provider_status": "active" if self.last_execution_status == "Success" else "error",
             "healthy_state": self.last_error is None,
             "version": "1.0",
+            "total_discovered_rules": self.total_discovered_rules,
+            "directories_scanned": self.directories_scanned,
             "loaded_rules": len(self.rules),
             "failed_rules": len(self.failed_rules),
             "ignored_rules": len(self.ignored_rules),
+            "duplicate_rules": len(self.duplicate_rules),
             "last_reload": self.last_reload,
+            "last_reload_duration": self.last_reload_duration,
             "execution_count": self.execution_count,
             "last_execution_status": self.last_execution_status,
             "execution_duration": self.last_execution_duration,
