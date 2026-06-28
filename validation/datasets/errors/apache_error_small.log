@@ -1,0 +1,50 @@
+[Thu Jun 08 14:47:33 2023] [error] [client 192.0.2.1] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 14:48:31 2023] [error] [client 8.8.8.8] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 14:49:15 2023] [error] [client 192.0.2.1] Connection reset by peer
+[Thu Jun 08 14:49:44 2023] [error] [client 8.8.8.8] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 14:50:43 2023] [error] [client 10.0.0.5] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 14:51:18 2023] [error] [client 1.1.1.1] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 14:51:59 2023] [error] [client 172.16.0.10] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 14:52:58 2023] [error] [client 1.1.1.1] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 14:53:09 2023] [error] [client 192.168.1.100] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 14:53:39 2023] [error] [client 192.168.1.100] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 14:54:22 2023] [error] [client 172.16.0.10] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 14:54:57 2023] [error] [client 203.0.113.5] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 14:55:13 2023] [error] [client 8.8.8.8] upstream timed out (110: Connection timed out) while reading response header from upstream
+[Thu Jun 08 14:55:14 2023] [error] [client 8.8.8.8] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 14:55:28 2023] [error] [client 192.0.2.1] Connection reset by peer
+[Thu Jun 08 14:56:07 2023] [error] [client 1.1.1.1] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 14:56:22 2023] [error] [client 10.0.0.5] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 14:56:56 2023] [error] [client 1.1.1.1] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 14:57:32 2023] [error] [client 1.1.1.1] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 14:58:00 2023] [error] [client 192.168.1.100] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 14:58:47 2023] [error] [client 8.8.8.8] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 14:59:25 2023] [error] [client 192.168.1.100] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 15:00:15 2023] [error] [client 172.16.0.10] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:00:18 2023] [error] [client 10.0.0.5] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:01:05 2023] [error] [client 192.0.2.1] upstream timed out (110: Connection timed out) while reading response header from upstream
+[Thu Jun 08 15:01:55 2023] [error] [client 198.51.100.2] upstream timed out (110: Connection timed out) while reading response header from upstream
+[Thu Jun 08 15:02:07 2023] [error] [client 1.1.1.1] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:02:40 2023] [error] [client 198.51.100.2] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 15:03:28 2023] [error] [client 198.51.100.2] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 15:04:04 2023] [error] [client 192.168.1.100] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 15:04:32 2023] [error] [client 8.8.8.8] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 15:04:56 2023] [error] [client 8.8.8.8] upstream timed out (110: Connection timed out) while reading response header from upstream
+[Thu Jun 08 15:05:02 2023] [error] [client 198.51.100.2] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 15:05:06 2023] [error] [client 198.51.100.2] Connection reset by peer
+[Thu Jun 08 15:05:16 2023] [error] [client 172.16.0.10] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 15:06:07 2023] [error] [client 198.51.100.2] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 15:06:11 2023] [error] [client 198.51.100.2] AH00124: Request exceeded the limit of 10 internal redirects due to probable configuration error.
+[Thu Jun 08 15:06:43 2023] [error] [client 198.51.100.2] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:07:31 2023] [error] [client 192.168.1.100] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:08:20 2023] [error] [client 203.0.113.5] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 15:08:37 2023] [error] [client 192.0.2.1] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:08:53 2023] [error] [client 192.0.2.1] Connection reset by peer
+[Thu Jun 08 15:09:07 2023] [error] [client 172.16.0.10] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 15:09:40 2023] [error] [client 192.168.1.100] File does not exist: /usr/local/apache/htdocs/favicon.ico
+[Thu Jun 08 15:10:29 2023] [error] [client 10.0.0.5] Connection reset by peer
+[Thu Jun 08 15:10:52 2023] [error] [client 192.0.2.1] script '/var/www/html/wp-login.php' not found or unable to stat
+[Thu Jun 08 15:11:32 2023] [error] [client 172.16.0.10] directory index of "/var/www/html/" is forbidden
+[Thu Jun 08 15:11:41 2023] [error] [client 172.16.0.10] client denied by server configuration: /usr/local/apache/htdocs/admin
+[Thu Jun 08 15:12:06 2023] [error] [client 10.0.0.5] Connection reset by peer
+[Thu Jun 08 15:12:37 2023] [error] [client 198.51.100.2] Connection reset by peer

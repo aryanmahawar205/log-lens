@@ -4,8 +4,8 @@
         "expected_analytics_provider": "goaccess",
         "expected_request_count": 50,
         "expected_visitors": 8,
-        "expected_sessions": 26,
-        "expected_bandwidth": 1189635,
+        "expected_sessions": 28,
+        "expected_bandwidth": 1302955,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -16,7 +16,7 @@
         "expected_request_count": 50,
         "expected_visitors": 8,
         "expected_sessions": 26,
-        "expected_bandwidth": 1216183,
+        "expected_bandwidth": 1309659,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -26,8 +26,8 @@
         "expected_analytics_provider": "goaccess",
         "expected_request_count": 50,
         "expected_visitors": 8,
-        "expected_sessions": 25,
-        "expected_bandwidth": 1172469,
+        "expected_sessions": 29,
+        "expected_bandwidth": 1166415,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -37,8 +37,8 @@
         "expected_analytics_provider": "goaccess",
         "expected_request_count": 50,
         "expected_visitors": 8,
-        "expected_sessions": 27,
-        "expected_bandwidth": 1136011,
+        "expected_sessions": 26,
+        "expected_bandwidth": 1190254,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -49,7 +49,7 @@
         "expected_request_count": 500,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 13051447,
+        "expected_bandwidth": 12835370,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -60,7 +60,7 @@
         "expected_request_count": 500,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 11978790,
+        "expected_bandwidth": 12553353,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -71,7 +71,7 @@
         "expected_request_count": 500,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 12693007,
+        "expected_bandwidth": 12872289,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -82,7 +82,7 @@
         "expected_request_count": 500,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 12601407,
+        "expected_bandwidth": 12679182,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -93,7 +93,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 126758183,
+        "expected_bandwidth": 126646266,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -104,7 +104,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 127082924,
+        "expected_bandwidth": 125870277,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -115,7 +115,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 127120491,
+        "expected_bandwidth": 127011927,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -126,7 +126,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 125269655,
+        "expected_bandwidth": 126233021,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -137,7 +137,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 1261346490,
+        "expected_bandwidth": 1261792571,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -148,7 +148,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 1259477604,
+        "expected_bandwidth": 1259419601,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -159,7 +159,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 1261421178,
+        "expected_bandwidth": 1260832256,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -170,7 +170,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 1258176174,
+        "expected_bandwidth": 1260336854,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -181,7 +181,7 @@
         "expected_request_count": 50,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 29006,
+        "expected_bandwidth": 29226,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -192,7 +192,7 @@
         "expected_request_count": 50,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 28626,
+        "expected_bandwidth": 28925,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -203,7 +203,7 @@
         "expected_request_count": 500,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 279030,
+        "expected_bandwidth": 275234,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -214,7 +214,7 @@
         "expected_request_count": 500,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 269918,
+        "expected_bandwidth": 280722,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -225,7 +225,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 2776834,
+        "expected_bandwidth": 2765911,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -236,7 +236,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 2749467,
+        "expected_bandwidth": 2728197,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -247,7 +247,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 27507964,
+        "expected_bandwidth": 27495894,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -258,7 +258,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 1,
         "expected_sessions": 1,
-        "expected_bandwidth": 27535028,
+        "expected_bandwidth": 27511093,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -269,7 +269,7 @@
         "expected_request_count": 50,
         "expected_visitors": 1,
         "expected_sessions": 8,
-        "expected_bandwidth": 16591,
+        "expected_bandwidth": 14434,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -280,7 +280,7 @@
         "expected_request_count": 500,
         "expected_visitors": 1,
         "expected_sessions": 8,
-        "expected_bandwidth": 149483,
+        "expected_bandwidth": 150028,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -291,7 +291,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 1,
         "expected_sessions": 8,
-        "expected_bandwidth": 1492996,
+        "expected_bandwidth": 1510906,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -302,7 +302,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 1,
         "expected_sessions": 8,
-        "expected_bandwidth": 14994084,
+        "expected_bandwidth": 15000000,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -312,8 +312,8 @@
         "expected_analytics_provider": "goaccess",
         "expected_request_count": 50,
         "expected_visitors": 8,
-        "expected_sessions": 25,
-        "expected_bandwidth": 1980898410,
+        "expected_sessions": 29,
+        "expected_bandwidth": 1688177397,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -324,7 +324,7 @@
         "expected_request_count": 500,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 12734313406,
+        "expected_bandwidth": 11095409328,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -335,7 +335,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 115160032039,
+        "expected_bandwidth": 125776951394,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -346,7 +346,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 8,
         "expected_sessions": 32,
-        "expected_bandwidth": 1258664035880,
+        "expected_bandwidth": 1204774654602,
         "expected_sigma_detections": false,
         "expected_native_detections": false,
         "expected_diagnostics_behaviour": "success"
@@ -488,8 +488,8 @@
         "expected_analytics_provider": "goaccess",
         "expected_request_count": 50,
         "expected_visitors": 10,
-        "expected_sessions": 23,
-        "expected_bandwidth": 925232,
+        "expected_sessions": 26,
+        "expected_bandwidth": 1354433,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -500,7 +500,7 @@
         "expected_request_count": 500,
         "expected_visitors": 10,
         "expected_sessions": 34,
-        "expected_bandwidth": 11034348,
+        "expected_bandwidth": 10492020,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -511,7 +511,7 @@
         "expected_request_count": 5000,
         "expected_visitors": 10,
         "expected_sessions": 34,
-        "expected_bandwidth": 108117990,
+        "expected_bandwidth": 109019884,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
@@ -522,7 +522,7 @@
         "expected_request_count": 50000,
         "expected_visitors": 10,
         "expected_sessions": 34,
-        "expected_bandwidth": 1076287025,
+        "expected_bandwidth": 1078347007,
         "expected_sigma_detections": true,
         "expected_native_detections": true,
         "expected_diagnostics_behaviour": "success"
