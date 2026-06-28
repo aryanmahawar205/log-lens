@@ -1,357 +1,441 @@
 # LogLens
 
-> Intelligent Web Log Analytics & Visualization Platform
-
-## Overview
-
-LogLens is a modern log analytics platform designed to transform raw web server logs into actionable insights.
-
-Unlike traditional tools such as Webalizer, which generate static HTML reports, LogLens provides interactive dashboards, advanced filtering, security insights, traffic intelligence, performance analytics, and visual exploration capabilities.
-
-The platform supports multiple web server log formats and enables users to understand website traffic, visitor behavior, infrastructure performance, and security events through a modern web interface.
+<p align="center">
+  <b>A Hybrid Web Log Analytics & Security Analysis Platform</b><br>
+  Fast • Extensible • Offline • Developer Friendly
+</p>
 
 ---
 
-## Why LogLens?
+## Overview
 
-Traditional log analyzers were designed for the early web.
+LogLens is a modern web log analytics platform that combines **high-performance traffic analytics** with **security detection** in a single application.
 
-Modern websites generate:
+Unlike traditional log analyzers that only provide dashboards, LogLens also performs automated security analysis using:
 
-* Large-scale traffic
-* API requests
-* Bot traffic
-* CDN traffic
-* Security events
-* Dynamic URLs
-* Performance telemetry
+- Native Detection Engine
+- Sigma Rule Engine
 
-Existing tools often provide:
-
-* Static reports
-* Limited filtering
-* Minimal visualizations
-* Poor handling of dynamic applications
-* No security intelligence
-
-LogLens addresses these limitations by providing a modern analytics experience.
+The platform is designed around a hybrid architecture where each component performs the task it is best suited for.
 
 ---
 
 ## Key Features
 
-### Universal Log Parsing
+### Analytics
 
-Supports:
+- Apache, Nginx, IIS and CLF log support
+- Automatic log format detection
+- GoAccess integration
+- DuckDB fallback analytics
+- Dashboard metrics
+- Traffic analytics
+- Performance analytics
+- URL analytics
+- Visitor analytics
+- Log explorer
+- Mixed-format upload support
 
-* Apache Access Logs
-* Apache Error Logs
-* Nginx Access Logs
-* Nginx Error Logs
-* IIS W3C Logs
-* Squid Proxy Logs
-* Generic CLF Logs
-* Custom User-Defined Formats
+### Security
 
----
+- Native detection engine
+- Sigma rule engine
+- Dynamic Sigma rule loading
+- Recursive rule discovery
+- Rule inventory
+- Runtime diagnostics
+- Security findings explorer
+- Provider attribution
+- Execution history
 
-### Interactive Dashboards
+### Validation
 
-Visual dashboards with:
-
-* Traffic Trends
-* Request Volume
-* Visitor Analysis
-* Response Time Analysis
-* Error Monitoring
-* Referrer Analysis
-* Geographic Distribution
-
----
-
-### Traffic Analytics
-
-Analyze:
-
-* Hits
-* Requests
-* Unique Visitors
-* Sessions
-* Returning Visitors
-* Entry Pages
-* Exit Pages
-* Peak Usage Hours
-* Bandwidth Consumption
+- Synthetic validation suite
+- Attack datasets
+- Performance datasets
+- Reconnaissance datasets
+- Error datasets
+- Malformed datasets
+- Expected result documentation
+- Validation matrix
 
 ---
 
-### URL Analytics
+# Architecture
 
-View:
-
-* Most Visited URLs
-* Least Visited URLs
-* Dynamic URL Aggregation
-* Query Parameter Analysis
-* Endpoint Popularity
-
----
-
-### Visitor Intelligence
-
-Track:
-
-* Client IPs
-* User Agents
-* Browser Statistics
-* Operating Systems
-* Device Types
-* Geographic Distribution
-
----
-
-### Performance Analytics
-
-Monitor:
-
-* Request Processing Time
-* Average Response Time
-* Slowest Endpoints
-* Response Time Trends
-* Throughput Metrics
-
----
-
-### Error Analytics
-
-Analyze:
-
-* HTTP Errors
-* Server Errors
-* Application Errors
-* Failed Requests
-* Error Trends
-
-Supported:
-
-* 4xx Errors
-* 5xx Errors
-* Apache Error Logs
-* Nginx Error Logs
-
----
-
-### Security Analytics
-
-Identify:
-
-* Suspicious Traffic
-* Brute Force Attempts
-* Vulnerability Scanners
-* Bot Activity
-* High Frequency Requests
-* Attack Patterns
-
-Examples:
-
-* SQL Injection Attempts
-* Path Traversal Attempts
-* XSS Probes
-* Directory Enumeration
-
----
-
-### Geographic Analytics
-
-Map traffic by:
-
-* Country
-* Region
-* City
-
-Using GeoIP enrichment.
-
----
-
-### Smart Bot Detection
-
-Separate:
-
-* Human Visitors
-* Search Engine Crawlers
-* Monitoring Systems
-* Automated Bots
-* Malicious Crawlers
-
-This addresses one of the major shortcomings of traditional log analyzers.
-
----
-
-### Advanced Search
-
-Filter logs by:
-
-* Date Range
-* IP Address
-* Status Code
-* URL Pattern
-* User Agent
-* Referrer
-* Country
-
----
-
-### Export Capabilities
-
-Export:
-
-* CSV
-* JSON
-* Excel
-* PDF Reports
-
----
-
-## Architecture
-
-```text
-Raw Log Files
-       │
-       ▼
-Log Ingestion Layer
-       │
-       ▼
-Parser Engine
-       │
-       ▼
-Normalization Layer
-       │
-       ▼
-Analytics Engine
-       │
-       ▼
-Storage Layer
-       │
-       ▼
-Visualization Layer
-       │
-       ▼
-Interactive Dashboard
+```
+                   Upload Log
+                        │
+                        ▼
+             Automatic Format Detection
+                        │
+                        ▼
+                Parser Selection
+                        │
+                        ▼
+            Log Normalization Layer
+                        │
+        ┌───────────────┴───────────────┐
+        ▼                               ▼
+ DuckDB Storage                 Security Analyzer
+        │                               │
+        │                      ┌────────┴────────┐
+        │                      ▼                 ▼
+        │              Native Detection     Sigma Engine
+        │                      │                 │
+        └──────────────┬────────┴────────────────┘
+                       ▼
+              REST API (FastAPI)
+                       ▼
+              React + TypeScript UI
 ```
 
 ---
 
-## Supported Metrics
+# Technology Stack
 
-### Traffic Metrics
+## Backend
 
-* Total Requests
-* Hits
-* Page Views
-* Unique Visitors
-* Sessions
-* Bandwidth Usage
+- FastAPI
+- Python
+- DuckDB
+- SQLAlchemy
+- Pydantic
 
-### Performance Metrics
+## Frontend
 
-* Average Response Time
-* Median Response Time
-* P95 Response Time
-* P99 Response Time
+- React
+- TypeScript
+- Vite
+- Recharts
+- Tailwind CSS
 
-### Error Metrics
+## External Tools
 
-* Error Rate
-* Status Code Distribution
-* Failed Requests
+- GoAccess
+- Sigma Rules
 
-### Security Metrics
+## Infrastructure
 
-* Suspicious IPs
-* Attack Attempts
-* Bot Traffic Ratio
-
----
-
-## Future Roadmap
-
-### Version 1
-
-* Core Parsing Engine
-* Dashboard
-* Apache Support
-* Nginx Support
-* CSV Export
-
-### Version 2
-
-* Security Analytics
-* GeoIP
-* Query Analysis
-* PDF Reports
-
-### Version 3
-
-* Real-Time Streaming
-* AI Insights
-* Predictive Analytics
-* Alerting System
-
-### Version 4
-
-* Distributed Processing
-* Multi-Tenant Deployments
-* SIEM Integrations
+- Docker
+- Docker Compose
+- GitHub
+- Playwright
+- Pytest
 
 ---
 
-## Technology Stack
+# Upload Pipeline
 
-### Backend
+Whenever a log file is uploaded, LogLens performs the following steps:
 
-* Python
-* FastAPI
+1. Detect log format automatically.
+2. Select the correct parser.
+3. Parse raw log lines.
+4. Normalize every record into a common schema.
+5. Store normalized logs in DuckDB.
+6. Execute analytics pipeline.
+7. Execute security pipeline.
+8. Return analytics and findings to the frontend.
 
-### Data Processing
-
-* Pandas
-* Polars
-* DuckDB
-
-### Database
-
-* PostgreSQL
-* SQLite (Development)
-
-### Frontend
-
-* React
-* TypeScript
-* TailwindCSS
-
-### Visualization
-
-* Recharts
-* Plotly
-
-### Deployment
-
-* Docker
-* Docker Compose
+This normalized schema ensures every analytics and security provider receives identical input regardless of the original log format.
 
 ---
 
-## Inspiration
+# Analytics Pipeline
 
-* Webalizer
-* AWStats
-* GoAccess
-* Grafana
-* Kibana
-* Splunk
+The analytics subsystem is powered by **GoAccess** with **DuckDB** as a fallback engine.
+
+```
+Upload
+   │
+   ▼
+Format Detection
+   │
+   ▼
+GoAccess Grouping
+   │
+   ▼
+GoAccess Execution
+   │
+   ▼
+JSON Report
+   │
+   ▼
+Merged Analytics
+   │
+   ▼
+Dashboard
+```
+
+### GoAccess
+
+GoAccess is responsible for:
+
+- request statistics
+- visitors
+- bandwidth
+- traffic trends
+- URL analytics
+- session analytics
+
+Mixed uploads are grouped by compatible formats before execution, preventing unsupported files from breaking analytics.
+
+If GoAccess cannot process a dataset, LogLens automatically falls back to DuckDB analytics.
+
+---
+
+# Security Pipeline
+
+Security analysis is completely independent from analytics.
+
+```
+Normalized Logs
+       │
+       ▼
+Security Analyzer
+       │
+ ┌─────┴─────────┐
+ ▼               ▼
+Native      Sigma Engine
+Detection
+ └─────┬─────────┘
+       ▼
+Merged Findings
+       ▼
+Security Dashboard
+```
+
+---
+
+# Native Detection
+
+The in-house detection engine performs lightweight heuristic analysis including:
+
+- SQL Injection
+- Path Traversal
+- XSS
+- Directory Enumeration
+- Suspicious Requests
+- High Risk URLs
+
+Native detection is optimized for speed and immediate execution.
+
+---
+
+# Sigma Engine
+
+LogLens integrates a native Sigma execution engine.
+
+Capabilities include:
+
+- recursive rule discovery
+- runtime rule loading
+- execution history
+- diagnostics
+- provider attribution
+- rule inventory
+- official rule library
+- custom rule support
+
+Rule directories:
+
+```
+backend/rules/sigma/
+
+official/
+custom/
+```
+
+New rules can be added without modifying application code.
+
+---
+
+# Validation Suite
+
+A complete validation framework is bundled with the project.
+
+```
+validation/
+
+datasets/
+normal/
+attacks/
+performance/
+errors/
+reconnaissance/
+malformed/
+mixed/
+
+expected_results/
+validation_matrix.md
+generate_validation.py
+```
+
+The suite validates:
+
+- parser detection
+- analytics
+- security findings
+- Sigma rules
+- native detection
+- dashboards
+- diagnostics
+
+---
+
+# Project Structure
+
+```
+backend/
+frontend/
+docs/
+validation/
+tests/
+data/
+docker-compose.yml
+README.md
+```
+
+---
+
+# Supported Log Formats
+
+- Apache Combined
+- Apache Common
+- Apache Error
+- Nginx Access
+- Nginx Error
+- IIS W3C
+- Common Log Format (CLF)
+
+---
+
+# APIs
+
+Primary API groups include:
+
+- Upload
+- Analytics
+- Traffic
+- Performance
+- URLs
+- Visitors
+- Security
+- Diagnostics
+- Settings
+
+Interactive API documentation is available via Swagger.
+
+---
+
+# Why DuckDB?
+
+DuckDB was chosen because it provides:
+
+- high-performance analytical queries
+- columnar execution
+- efficient aggregations
+- embedded deployment
+- no external database server
+
+It enables fast OLAP-style analysis directly inside LogLens.
+
+---
+
+# Why GoAccess?
+
+GoAccess is a mature, high-performance log analytics engine capable of processing millions of log entries efficiently.
+
+LogLens leverages GoAccess for analytics while extending it with:
+
+- mixed-format processing
+- diagnostics
+- execution history
+- fallback analytics
+- unified frontend
+
+---
+
+# Why Sigma?
+
+Sigma provides a vendor-neutral rule format for security detections.
+
+By integrating Sigma, LogLens benefits from a community-maintained ecosystem of web-focused detection rules while allowing custom organizational rules without modifying the application.
+
+---
+
+# Design Principles
+
+- Modular architecture
+- Separation of analytics and security
+- Format-independent processing
+- Extensible rule system
+- Offline capable
+- Open-source friendly
+- Minimal external dependencies
+- Maintainable codebase
+
+---
+
+# Running the Project
+
+```bash
+git clone <repo>
+
+docker compose up --build
+```
+
+Frontend:
+
+```
+http://localhost:5173
+```
+
+Backend:
+
+```
+http://localhost:8000
+```
+
+Swagger:
+
+```
+http://localhost:8000/docs
+```
+
+---
+
+# Future Roadmap
+
+- Live log streaming
+- Real-time dashboards
+- Alerting
+- Role-based access control
+- Threat intelligence integration
+- SIEM export
+- OpenTelemetry support
+- Elasticsearch connector
+- ML-based anomaly detection
+
+---
+
+# Acknowledgements
+
+This project builds upon several excellent open-source technologies:
+
+- GoAccess
+- DuckDB
+- Sigma
+- FastAPI
+- React
+- Recharts
+- Docker
+- Playwright
+- Pytest
 
 ---
 
 ## License
 
-MIT License
+This project is released under the MIT License.
