@@ -8,7 +8,14 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      # Backend source code
       - ./backend:/app
+
+      # Persist DuckDB database
+      - ./backend/data:/app/data
+
+      # Expose validation datasets to the backend
+      - ./validation:/app/validation
     environment:
       - NODE_ENV=development
 
