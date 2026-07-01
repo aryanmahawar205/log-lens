@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends
 from typing import Optional, Dict, Any, List
+from pydantic import BaseModel
 from app.analytics.engine import NativeAnalyticsProvider
 from app.analytics.goaccess import GoAccessAnalyticsProvider
 from app.parsers.detector import FormatDetector
@@ -82,6 +83,157 @@ async def reset_database():
     storage.execute_query("DELETE FROM uploads")
     return {"message": "Database reset successfully"}
 
+async def process_log_file(file_path: str, original_filename: str, original_path: str = None, file_size: int = None, checksum: str = None, last_modified: datetime = None) -> Dict[str, Any]:
+    """
+    Shared logic to detect format, parse, and ingest a log file into the database.
+    """
+    # Detect format
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        sample_lines = [line.strip() for line in f.readlines(8192) if line.strip()][:100]
+
+    format_name, confidence = FormatDetector.detect_format(sample_lines)
+    if not format_name:
+        raise ValueError("Could not detect log format.")
+
+    parser = ParserRegistry.get_parser(format_name)
+    if not parser:
+        raise ValueError(f"Parser {format_name} not found.")
+
+    # Generate new upload ID (Unix timestamp or sequence)
+    upload_id = int(datetime.now().timestamp() * 1000)
+
+    # For GoAccess or other external tools, we may want to preserve the raw log file
+    raw_log_dir = "data/raw_logs"
+    os.makedirs(raw_log_dir, exist_ok=True)
+
+    raw_log_path = os.path.join(raw_log_dir, f"{upload_id}.log")
+    import shutil
+    if file_path != raw_log_path:
+        shutil.copy(file_path, raw_log_path)
+
+    # Parse and ingest in batches to minimize memory footprint
+    batch_size = 10000
+    current_batch = []
+    total_ingested = 0
+
+    # We still ingest into Native provider for secondary analytics and log exploration
+    # even if GoAccess is primary for overview
+    for entry in parser.parse_file(file_path):
+        current_batch.append(entry)
+        if len(current_batch) >= batch_size:
+            storage.ingest_batch(current_batch, upload_id)
+            total_ingested += len(current_batch)
+            current_batch.clear()
+
+    # Ingest remaining
+    if current_batch:
+        storage.ingest_batch(current_batch, upload_id)
+        total_ingested += len(current_batch)
+
+    # Record upload in uploads table
+    storage.execute_query("""
+        INSERT INTO uploads (id, filename, format, uploaded_at, total_entries, parser_used, confidence, original_path, file_size, checksum, last_modified)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (upload_id, original_filename, format_name, datetime.now(), total_ingested, format_name, confidence, original_path, file_size, checksum, last_modified))
+
+    return {
+        "message": f"Successfully ingested {total_ingested} log entries",
+        "upload_id": upload_id,
+        "format": format_name,
+        "confidence": confidence
+    }
+
+class FolderImportRequest(BaseModel):
+    folder_path: str
+
+@router.post("/upload/folder")
+async def upload_folder(request: FolderImportRequest):
+    """
+    Recursively scan a directory, discover supported logs, skip duplicates, and import them.
+    """
+    folder_path = request.folder_path
+    if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
+        raise HTTPException(status_code=400, detail="Invalid directory path")
+
+    import hashlib
+    def compute_checksum(filepath: str) -> str:
+        sha256_hash = hashlib.sha256()
+        with open(filepath, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+
+    existing_checksums = {row['checksum'] for row in storage.execute_query("SELECT checksum FROM uploads WHERE checksum IS NOT NULL")}
+
+    files_discovered = 0
+    files_imported = 0
+    files_skipped = 0
+    files_unsupported = 0
+    start_time = datetime.now()
+
+    scan_id = int(start_time.timestamp() * 1000)
+
+    for root, _, files in os.walk(folder_path):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            files_discovered += 1
+
+            # Get basic metadata
+            try:
+                stat = os.stat(filepath)
+                file_size = stat.st_size
+                last_modified = datetime.fromtimestamp(stat.st_mtime)
+            except Exception:
+                files_skipped += 1
+                continue
+
+            checksum = compute_checksum(filepath)
+
+            # Duplicate check
+            if checksum in existing_checksums:
+                files_skipped += 1
+                continue
+
+            # Try processing
+            try:
+                # We attempt to process it; if process_log_file raises ValueError, it's unsupported
+                await process_log_file(
+                    file_path=filepath,
+                    original_filename=filename,
+                    original_path=filepath,
+                    file_size=file_size,
+                    checksum=checksum,
+                    last_modified=last_modified
+                )
+                files_imported += 1
+                existing_checksums.add(checksum)
+            except ValueError:
+                files_unsupported += 1
+            except Exception as e:
+                # Other errors during processing
+                print(f"Error processing {filepath}: {e}")
+                files_skipped += 1
+
+    duration = (datetime.now() - start_time).total_seconds()
+    status = "SUCCESS" if files_imported > 0 else "COMPLETED_NO_IMPORTS"
+
+    storage.execute_query("""
+        INSERT INTO folder_scans (id, folder_path, scanned_at, files_discovered, files_imported, files_skipped, files_unsupported, duration_sec, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (scan_id, folder_path, start_time, files_discovered, files_imported, files_skipped, files_unsupported, duration, status))
+
+    return {
+        "message": f"Folder scan completed. Imported {files_imported} new files.",
+        "details": {
+            "files_discovered": files_discovered,
+            "files_imported": files_imported,
+            "files_skipped": files_skipped,
+            "files_unsupported": files_unsupported,
+            "duration_sec": duration,
+            "status": status
+        }
+    }
+
 @router.post("/upload")
 async def upload_log_file(file: UploadFile = File(...)):
     """
@@ -97,60 +249,14 @@ async def upload_log_file(file: UploadFile = File(...)):
             tmp.write(content)
             tmp_path = tmp.name
 
-        # Detect format
-        with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
-            sample_lines = [line.strip() for line in f.readlines(8192) if line.strip()][:100]
+        import hashlib
+        # Compute basic checksum for UI-uploaded files if we want, but not strictly necessary here.
+        # Just passing None for now.
 
-        format_name, confidence = FormatDetector.detect_format(sample_lines)
-        if not format_name:
-            raise HTTPException(status_code=400, detail="Could not detect log format.")
-
-        parser = ParserRegistry.get_parser(format_name)
-        if not parser:
-            raise HTTPException(status_code=500, detail=f"Parser {format_name} not found.")
-
-        # Generate new upload ID (Unix timestamp or sequence)
-        upload_id = int(datetime.now().timestamp() * 1000)
-
-        # For GoAccess or other external tools, we may want to preserve the raw log file
-        raw_log_dir = "data/raw_logs"
-        os.makedirs(raw_log_dir, exist_ok=True)
-
-        raw_log_path = os.path.join(raw_log_dir, f"{upload_id}.log")
-        import shutil
-        shutil.copy(tmp_path, raw_log_path)
-
-        # Parse and ingest in batches to minimize memory footprint
-        batch_size = 10000
-        current_batch = []
-        total_ingested = 0
-
-        # We still ingest into Native provider for secondary analytics and log exploration
-        # even if GoAccess is primary for overview
-        for entry in parser.parse_file(tmp_path):
-            current_batch.append(entry)
-            if len(current_batch) >= batch_size:
-                storage.ingest_batch(current_batch, upload_id)
-                total_ingested += len(current_batch)
-                current_batch.clear()
-
-        # Ingest remaining
-        if current_batch:
-            storage.ingest_batch(current_batch, upload_id)
-            total_ingested += len(current_batch)
-
-        # Record upload in uploads table
-        storage.execute_query("""
-            INSERT INTO uploads (id, filename, format, uploaded_at, total_entries, parser_used, confidence)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (upload_id, file.filename, format_name, datetime.now(), total_ingested, format_name, confidence))
-
-        return {
-            "message": f"Successfully ingested {total_ingested} log entries",
-            "upload_id": upload_id,
-            "format": format_name,
-            "confidence": confidence
-        }
+        result = await process_log_file(tmp_path, file.filename)
+        return result
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

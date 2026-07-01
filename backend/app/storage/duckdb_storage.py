@@ -31,6 +31,33 @@ class DuckDBStorage(BaseStorage):
             )
         """)
 
+        # Add new metadata columns if they don't exist
+        self.conn.execute("ALTER TABLE uploads ADD COLUMN IF NOT EXISTS original_path VARCHAR")
+        self.conn.execute("ALTER TABLE uploads ADD COLUMN IF NOT EXISTS file_size BIGINT")
+        self.conn.execute("ALTER TABLE uploads ADD COLUMN IF NOT EXISTS checksum VARCHAR")
+        self.conn.execute("ALTER TABLE uploads ADD COLUMN IF NOT EXISTS last_modified TIMESTAMP")
+
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS folder_scans (
+                id BIGINT PRIMARY KEY,
+                folder_path VARCHAR,
+                scanned_at TIMESTAMP,
+                files_discovered INTEGER,
+                files_imported INTEGER,
+                files_skipped INTEGER,
+                files_unsupported INTEGER,
+                duration_sec DOUBLE,
+                status VARCHAR
+            )
+        """)
+
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                key VARCHAR PRIMARY KEY,
+                value VARCHAR
+            )
+        """)
+
         self.conn.execute("""
             CREATE TABLE IF NOT EXISTS log_entries (
                 upload_id BIGINT,

@@ -11,6 +11,7 @@ export function SystemDiagnostics() {
   const [goaccessDiag, setGoaccessDiag] = useState<any>(null);
   const [sigmaDiag, setSigmaDiag] = useState<any>(null);
   const [sigmaRules, setSigmaRules] = useState<any[]>([]);
+  const [folderScans, setFolderScans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,16 +20,18 @@ export function SystemDiagnostics() {
     setLoading(true);
     setError(null);
     try {
-      const [provRes, diagRes, sigmaRes, rulesRes] = await Promise.all([
+      const [provRes, diagRes, sigmaRes, rulesRes, folderScansRes] = await Promise.all([
         fetchApi<any>('/system/provider'),
         fetchApi<any>('/system/integrations/goaccess', filters),
         fetchApi<any>('/system/integrations/sigma'),
-        fetchApi<any[]>('/security/rules')
+        fetchApi<any[]>('/security/rules'),
+        fetchApi<any[]>('/system/folder-scans')
       ]);
       setProvider(provRes);
       setGoaccessDiag(diagRes);
       setSigmaDiag(sigmaRes);
       setSigmaRules(rulesRes || []);
+      setFolderScans(folderScansRes || []);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
@@ -253,6 +256,71 @@ export function SystemDiagnostics() {
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     No rules loaded or matching search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+        <div className="p-4 border-b border-gray-800 flex items-center text-blue-400">
+          <FolderOpen className="w-5 h-5 mr-2" />
+          <h3 className="font-semibold text-gray-200">Folder Scan History</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-gray-400 bg-gray-800/50 uppercase border-b border-gray-800">
+              <tr>
+                <th className="px-6 py-3">Scan Time</th>
+                <th className="px-6 py-3">Folder Path</th>
+                <th className="px-6 py-3">Discovered</th>
+                <th className="px-6 py-3">Imported</th>
+                <th className="px-6 py-3">Skipped</th>
+                <th className="px-6 py-3">Duration (s)</th>
+                <th className="px-6 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-800/50">
+              {folderScans && folderScans.length > 0 ? (
+                folderScans.map((scan: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-gray-800/30 transition-colors">
+                    <td className="px-6 py-4 text-gray-300 whitespace-nowrap">
+                      {new Date(scan.scanned_at).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300 truncate max-w-[200px]" title={scan.folder_path}>
+                      {scan.folder_path}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300">
+                      {scan.files_discovered}
+                    </td>
+                    <td className="px-6 py-4 text-emerald-400 font-medium">
+                      {scan.files_imported}
+                    </td>
+                    <td className="px-6 py-4 text-yellow-400">
+                      {scan.files_skipped}
+                    </td>
+                    <td className="px-6 py-4 text-gray-300">
+                      {scan.duration_sec?.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {scan.status === 'SUCCESS' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-900/50 text-emerald-400">
+                          SUCCESS
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-800 text-gray-400">
+                          {scan.status}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    No folder scans recorded.
                   </td>
                 </tr>
               )}
