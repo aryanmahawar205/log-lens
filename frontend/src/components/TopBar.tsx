@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Filter, Calendar, Globe, AlertCircle, Bot, X, UploadCloud, Database, Trash2 } from 'lucide-react';
+import { Filter, Calendar, Globe, AlertCircle, Bot, X, UploadCloud, Database, Trash2, FolderSync } from 'lucide-react';
 import { useFilterContext } from '../context/FilterContext';
 import { useDatasetContext } from '../context/DatasetContext';
 import { FileUpload } from './FileUpload';
+import { FolderImport } from './FolderImport';
 
 export function TopBar() {
   const { filters, setFilter, clearFilters, hasActiveFilters } = useFilterContext();
   const { datasets, selectedDataset, selectDataset, deleteDataset, refreshDatasets } = useDatasetContext();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isFolderImportOpen, setIsFolderImportOpen] = useState(false);
 
   const handleDelete = async () => {
     if (selectedDataset && window.confirm('Are you sure you want to delete this dataset?')) {
@@ -77,11 +79,19 @@ export function TopBar() {
         </button>
 
         <button
+          onClick={() => setIsFolderImportOpen(true)}
+          className="flex items-center px-3 py-1.5 rounded-md text-sm bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+        >
+          <FolderSync className="w-4 h-4 mr-2" />
+          Import Folder
+        </button>
+
+        <button
           onClick={() => setIsUploadOpen(true)}
           className="flex items-center px-3 py-1.5 rounded-md text-sm bg-teal-600 hover:bg-teal-500 text-white transition-colors"
         >
           <UploadCloud className="w-4 h-4 mr-2" />
-          Upload Logs
+          Upload File
         </button>
       </div>
 
@@ -91,7 +101,53 @@ export function TopBar() {
           <div className="space-y-4">
             <div>
               <label className="flex items-center text-xs font-medium text-gray-400 mb-1.5">
-                <Calendar className="w-3.5 h-3.5 mr-1" /> Date Range
+                <Calendar className="w-3.5 h-3.5 mr-1" /> Quick Ranges
+              </label>
+              <select
+                className="w-full bg-gray-800 border border-gray-700 text-sm rounded px-3 py-1.5 text-white outline-none focus:border-blue-500 mb-2"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const now = new Date();
+                  let start = '';
+                  let end = now.toISOString().split('T')[0];
+
+                  if (val === 'today') {
+                    start = end;
+                  } else if (val === '7d') {
+                    const d = new Date(); d.setDate(d.getDate() - 7);
+                    start = d.toISOString().split('T')[0];
+                  } else if (val === '30d') {
+                    const d = new Date(); d.setDate(d.getDate() - 30);
+                    start = d.toISOString().split('T')[0];
+                  } else if (val === '90d') {
+                    const d = new Date(); d.setDate(d.getDate() - 90);
+                    start = d.toISOString().split('T')[0];
+                  } else if (val === '6m') {
+                    const d = new Date(); d.setMonth(d.getMonth() - 6);
+                    start = d.toISOString().split('T')[0];
+                  } else if (val === '1y') {
+                    const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+                    start = d.toISOString().split('T')[0];
+                  }
+
+                  if (val && val !== 'custom') {
+                    setFilter('start_date', start);
+                    setFilter('end_date', end);
+                  }
+                }}
+                defaultValue="custom"
+              >
+                <option value="custom">Custom Range</option>
+                <option value="today">Today</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="6m">Last 6 months</option>
+                <option value="1y">Last year</option>
+              </select>
+
+              <label className="flex items-center text-xs font-medium text-gray-400 mb-1.5 mt-3">
+                <Calendar className="w-3.5 h-3.5 mr-1" /> Custom Date Range
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -180,6 +236,25 @@ export function TopBar() {
               <FileUpload onSuccess={async () => {
                 await refreshDatasets();
                 setTimeout(() => setIsUploadOpen(false), 2000);
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Folder Import Modal */}
+      {isFolderImportOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-800">
+              <h2 className="text-lg font-semibold text-white">Import Folder</h2>
+              <button onClick={() => setIsFolderImportOpen(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <FolderImport onSuccess={async () => {
+                await refreshDatasets();
               }} />
             </div>
           </div>

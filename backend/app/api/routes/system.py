@@ -82,3 +82,37 @@ async def get_sigma_diagnostics():
     """
     from app.api.routes.security import security_analyzer
     return security_analyzer.sigma_engine.get_diagnostics()
+
+from pydantic import BaseModel
+
+class SettingsUpdate(BaseModel):
+    enterprise_log_directory: str
+
+@router.get("/settings")
+async def get_settings():
+    """Get system settings."""
+    from app.api.routes.analytics import storage
+    results = storage.execute_query("SELECT key, value FROM settings")
+    settings_dict = {row["key"]: row["value"] for row in results}
+    return {
+        "enterprise_log_directory": settings_dict.get("enterprise_log_directory", "")
+    }
+
+@router.post("/settings")
+async def update_settings(settings: SettingsUpdate):
+    """Update system settings."""
+    from app.api.routes.analytics import storage
+    # Upsert pattern in duckdb
+    storage.execute_query("""
+        INSERT INTO settings (key, value)
+        VALUES ('enterprise_log_directory', ?)
+        ON CONFLICT (key) DO UPDATE SET value = excluded.value
+    """, (settings.enterprise_log_directory,))
+
+    return {"message": "Settings updated successfully"}
+
+@router.get("/folder-scans")
+async def get_folder_scans():
+    """Get folder scan history."""
+    from app.api.routes.analytics import storage
+    return storage.execute_query("SELECT * FROM folder_scans ORDER BY scanned_at DESC LIMIT 50")

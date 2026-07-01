@@ -39,8 +39,12 @@ class QueryBuilder:
             parameters.append(filters["start_date"])
 
         if "end_date" in filters and filters["end_date"]:
+            end_val = filters["end_date"]
+            if len(end_val) == 10:  # Format YYYY-MM-DD
+                # To include the full day
+                end_val = f"{end_val} 23:59:59.999999"
             clauses.append("timestamp <= CAST(? AS TIMESTAMP)")
-            parameters.append(filters["end_date"])
+            parameters.append(end_val)
 
         if "ip" in filters and filters["ip"]:
             clauses.append("ip = ?")
