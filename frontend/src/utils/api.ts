@@ -1,10 +1,5 @@
 import { type FilterState } from '../context/FilterContext';
-
-  const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000/api/v1/analytics'
-    : `${window.location.origin.replace('-3000.app.github.dev', '-8000.app.github.dev')}/api/v1/analytics`);
+import { API_BASE, SYSTEM_API_BASE } from "../config/api";
 
 /**
  * Builds query parameters string from a filters object and any additional parameters.
@@ -39,10 +34,9 @@ export async function fetchApi<T>(endpoint: string, filters: FilterState = {}, a
   // Handle system endpoints that are not under analytics prefix
   let url;
   if (endpoint.startsWith('/system/')) {
-    const systemBase = API_BASE_URL.replace('/analytics', '');
-    url = `${systemBase}${endpoint}${queryString}`;
+    url = `${SYSTEM_API_BASE}${endpoint.replace("/system", "")}${queryString}`;
   } else {
-    url = `${API_BASE_URL}${endpoint}${queryString}`;
+    url = `${API_BASE}${endpoint}${queryString}`;
   }
 
   console.log('API Request:', url);

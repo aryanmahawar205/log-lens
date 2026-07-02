@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { API_BASE } from "../config/api";
 
 export interface Dataset {
   id: number;
@@ -21,10 +22,6 @@ interface DatasetContextType {
 
 const DatasetContext = createContext<DatasetContextType | undefined>(undefined);
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  `${window.location.origin.replace('-3000.app.github.dev', '-8000.app.github.dev')}/api/v1/analytics`;
-
 const DATASET_STORAGE_KEY = 'loglens_dataset_id';
 
 export function DatasetProvider({ children }: { children: ReactNode }) {
@@ -37,7 +34,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
       // Determine API URL based on environment/location to avoid hardcoding localhost
       const apiUrl = window.location.hostname === 'localhost'
         ? 'http://localhost:8000/api/v1/analytics/datasets'
-        : `${API_BASE_URL}/datasets`;
+        : `${API_BASE}/datasets`;
 
       const response = await fetch(apiUrl);
       if (!response.ok) {
@@ -95,7 +92,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
     try {
       const apiUrl = window.location.hostname === 'localhost'
         ? `http://localhost:8000/api/v1/analytics/datasets/${id}`
-        : `${API_BASE_URL}/datasets/${id}`;
+        : `${API_BASE}/datasets/${id}`;
 
       const response = await fetch(apiUrl, { method: 'DELETE' });
       if (!response.ok) {

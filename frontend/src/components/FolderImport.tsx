@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Folder, CheckCircle, AlertCircle, Loader2, Save } from 'lucide-react';
 import { useDatasetContext } from '../context/DatasetContext';
-
-const API_BASE = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname.replace('-3000.', '-8000.')}/api/v1/analytics`;
-const SYSTEM_API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/analytics', '/system') : `${window.location.protocol}//${window.location.hostname.replace('-3000.', '-8000.')}/api/v1/system`;
+import { API_BASE, SYSTEM_API_BASE } from "../config/api";
 
 interface FolderImportProps {
   onSuccess?: () => void;

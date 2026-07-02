@@ -1,10 +1,7 @@
 import { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useDatasetContext } from '../context/DatasetContext';
-
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  `${window.location.protocol}//${window.location.hostname.replace('-3000.', '-8000.')}/api/v1/analytics`;
+import { API_BASE } from "../config/api";
 
 interface FileUploadProps {
   onSuccess?: () => void;
